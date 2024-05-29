@@ -4,6 +4,13 @@ on:
     branches: [main, next, v4]
   pull_request:
     branches: ['*']
+    paths-ignore:
+      - 'docs/**'
+      - 'benchmarks/**'
+      - '.vscode/**'
+      - 'LICENSE'
+      - 'README.md'
+      - '.gitignore'
 
 jobs:
   main:
