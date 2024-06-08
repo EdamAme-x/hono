@@ -1,7 +1,7 @@
 import type { Params, Result, Router } from '../../router'
-import { METHOD_NAME_ALL, METHODS, UnsupportedPathError } from '../../router'
+import { METHOD_NAME_ALL, UnsupportedPathError } from '../../router'
 
-type HttpMethod = Uppercase<typeof METHODS[number]>
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 type Route<T> = [RegExp, string, T] // [pattern, method, handler, path]
 
 /**
