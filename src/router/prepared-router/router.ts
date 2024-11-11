@@ -7,10 +7,11 @@ Generate Function
 
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
-  preparedMatchFunction = new Function('method', 'path', 'return (() => [])') as (
+  #preparedMatchFunction = new Function('method', 'path', 'return (()=>[])') as (
     method: string,
     path: string
   ) => [T, Params][]
+  routes: [string, string, T][] = []
 
   constructor() {
     if (typeof Function === 'undefined') {
@@ -21,11 +22,18 @@ export class PreparedRouter<T> implements Router<T> {
   add(method: string, path: string, handler: T) {
     const optionalParameter = checkOptionalParameter(path)
     if (optionalParameter) {
-      return optionalParameter.forEach((p) => this.add(method, p, handler))
+      optionalParameter.forEach((p) => this.add(method, p, handler))
+    }else {
+      this.routes.push([method, path, handler])
+      this.#buildPreparedMatchFunction()
     }
   }
 
   match(method: string, path: string): Result<T> {
-    return [this.preparedMatchFunction(method, path)]
+    return [this.#preparedMatchFunction(method, path)]
+  }
+
+  #buildPreparedMatchFunction() {
+
   }
 }
