@@ -65,6 +65,7 @@ function buildConditions(routes: MRoutes): string {
   ]
 
   const buildCondition = (route: MRoute): string => {
+    const pathParts = route[1].split('/').slice(1).reduce((_, cur) => ['/', ...cur], [] as string[])
     const conditions: string[] = []
     const paramAssignments: string[] = []
 
@@ -75,6 +76,7 @@ function buildConditions(routes: MRoutes): string {
 
       switch (element.type) {
         case 'separator':
+          conditions.push(`pathParts.length === ${pathParts.length}`)
           conditions.push(`pathParts[${pathIndex + 1}] === '/'`);
           pathIndex += 2
           break;
@@ -103,7 +105,7 @@ function buildConditions(routes: MRoutes): string {
     return `${condition} { ${paramAssignments.length ? 'const params = Object.create(null);' : ''} ${paramAssignmentCode} ${variables.matchResult}.push([${route[0]}, ${paramAssignments.length ? 'params' : variables.emptyParams}]); }`;
   }
 
-  source[0] = `const pathParts = path.split("/");`
+  source[0] = `const pathParts = path.split('/').slice(1).reduce((_, cur) => ['/', ...cur], []);`
 
   for (const route of routes) {
     source[2] += buildCondition(route)
