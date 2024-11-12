@@ -5,27 +5,28 @@ import type { PreparedMatch, Routes } from './router'
 type MRoutes = [number, string, PathTree][]
 
 export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
-    const methodsWithRoutes: Record<string, MRoutes> = Object.create(null)
+  const methodsWithRoutes: Record<string, MRoutes> = Object.create(null)
 
-    for (let i = 0, len = routes.length; i < len; i++) {
-      const [method, [path, tree]] = routes[i]
+  for (let i = 0, len = routes.length; i < len; i++) {
+    const [method, [path, tree]] = routes[i]
 
-      if (!methodsWithRoutes[method]) {
-        methodsWithRoutes[method] = []
-      }
-
-      methodsWithRoutes[method].push([i, path, tree])
+    if (!methodsWithRoutes[method]) {
+      methodsWithRoutes[method] = []
     }
 
-    return new Function(
-      'method',
-      'path',
-      `return (() => {
-        const matchResult = []
+    methodsWithRoutes[method].push([i, path, tree])
+  }
+
+  return new Function(
+    'method',
+    'path',
+    `return (() => {
+        const matchResult = [];
 
         ${
-          methodsWithRoutes[METHOD_NAME_ALL] &&
-          buildConditions(methodsWithRoutes[METHOD_NAME_ALL])
+          methodsWithRoutes[METHOD_NAME_ALL]
+            ? buildConditions(methodsWithRoutes[METHOD_NAME_ALL])
+            : ''
         }
 
         ${(() => {
@@ -42,16 +43,16 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
           return source
         })()}
 
-        return matchResult
+        return matchResult;
       })()`
-    ) as PreparedMatch
+  ) as PreparedMatch
 }
 
 function buildConditions(routes: MRoutes): string {
   return routes
     .map(
       ([handlerIndex, path, tree]) =>
-        `if (path === '${path}') { matchResult.push([${handlerIndex}, ${tree}]) }`
+        `if (path === '${path}') { matchResult.push([${handlerIndex}, {}]) }`
     )
     .join('\n')
 }
