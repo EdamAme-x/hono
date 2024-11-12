@@ -57,6 +57,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   ) as PreparedMatch
 }
 
+// all fix and normalizer
 function buildConditions(routes: MRoutes): string {
   let source = [
     '', // head
