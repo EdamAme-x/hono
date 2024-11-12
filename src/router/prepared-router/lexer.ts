@@ -146,5 +146,5 @@ export const pathLexer = (path: string): PathTree => {
     }
   }
 
-  return pathTree as PathTree
+  return pathTree
 }

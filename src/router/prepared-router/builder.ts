@@ -2,7 +2,8 @@ import { METHOD_NAME_ALL } from '../../router'
 import type { PathTree } from './lexer'
 import type { PreparedMatch, Routes } from './router'
 
-type MRoutes = [number, string, PathTree][]
+type MRoute = [number, string, PathTree]
+type MRoutes = MRoute[]
 
 const variables = {
   matchResult: 'matchResult',
@@ -57,7 +58,58 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
 }
 
 function buildConditions(routes: MRoutes): string {
-  const source = ''
+  let source = [
+    '', // head
+    '', // meta
+    '' // body
+  ]
 
-  return source
+  const buildCondition = (route: MRoute): string => {
+    const conditions: string[] = []
+    const paramAssignments: string[] = []
+
+    let pathIndex = -1
+
+    for (let i = 0, pathTree = route[2], len = pathTree.length; i < len; i++) {
+      const element = pathTree[i]
+
+      switch (element.type) {
+        case 'separator':
+          conditions.push(`pathParts[${pathIndex + 1}] === '/'`);
+          pathIndex += 2
+          break;
+        case 'static':
+          conditions.push(`pathParts[${pathIndex}] === '${element.value}'`);
+          break;
+        case 'dynamic':
+          conditions.push(`pathParts[${pathIndex}] !== undefined`);
+          paramAssignments.push(`params['${element.value}'] = pathParts[${pathIndex}]`);
+          if (element.regex) {
+            conditions.push(`/${element.regex}/.test(pathParts[${pathIndex}])`);
+          }
+          break;
+        case 'always':
+          conditions.push(`pathParts.length > ${pathIndex}`);
+          break;
+      }
+    }
+
+    const condition = conditions.length ? `if (${conditions.join(' && ')})` : ''
+
+    const paramAssignmentCode = paramAssignments.length
+      ? paramAssignments.join('; ') + '; '
+      : '';
+
+    return `${condition} { ${paramAssignments.length ? 'const params = Object.create(null);' : ''} ${paramAssignmentCode} ${variables.matchResult}.push([${route[0]}, ${paramAssignments.length ? 'params' : variables.emptyParams}]); }`;
+  }
+
+  source[0] = `const pathParts = path.split("/");`
+
+  for (const route of routes) {
+    source[2] += buildCondition(route)
+  }
+
+  console.log(source.join(""))
+
+  return source.join("")
 }
