@@ -1,25 +1,26 @@
-type PathSeparator = {
+export type PathSeparator = {
   type: 'separator'
   value: '/'
 }
 
-type PathStatic = {
+export type PathStatic = {
   type: 'static'
   value: string
 }
 
-type PathDynamic = {
+export type PathDynamic = {
   type: 'dynamic'
   value: string
   regex: string
 }
 
+export 
 type PathAlways = {
   type: 'always'
   value: '*'
 }
 
-type PathElement = PathSeparator | PathStatic | PathDynamic | PathAlways
+export type PathElement = PathSeparator | PathStatic | PathDynamic | PathAlways
 
 export type PathTree = PathElement[]
 

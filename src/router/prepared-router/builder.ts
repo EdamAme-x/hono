@@ -4,6 +4,11 @@ import type { PreparedMatch, Routes } from './router'
 
 type MRoutes = [number, string, PathTree][]
 
+const variables = {
+  matchResult: 'matchResult',
+  emptyParams: 'emptyParams',
+}
+
 export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   const methodsWithRoutes: Record<string, MRoutes> = Object.create(null)
 
@@ -21,7 +26,8 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
     'method',
     'path',
     `return (() => {
-        const matchResult = [];
+        const ${variables.matchResult} = [];
+        const ${variables.emptyParams} = Object.create(null);
 
         ${
           methodsWithRoutes[METHOD_NAME_ALL]
@@ -43,16 +49,15 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
           return source
         })()}
 
-        return matchResult;
+        ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
+
+        return ${variables.matchResult};
       })()`
   ) as PreparedMatch
 }
 
 function buildConditions(routes: MRoutes): string {
-  return routes
-    .map(
-      ([handlerIndex, path, tree]) =>
-        `if (path === '${path}') { matchResult.push([${handlerIndex}, {}]) }`
-    )
-    .join('\n')
+  const source = ''
+
+  return source
 }
