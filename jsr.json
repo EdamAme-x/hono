@@ -63,6 +63,7 @@
     "./router/smart-router": "./src/router/smart-router/index.ts",
     "./router/trie-router": "./src/router/trie-router/index.ts",
     "./router/pattern-router": "./src/router/pattern-router/index.ts",
+    "./router/prepared-router": "./src/router/prepared-router/index.ts",
     "./router/linear-router": "./src/router/linear-router/index.ts",
     "./client": "./src/client/index.ts",
     "./adapter": "./src/helper/adapter/index.ts",

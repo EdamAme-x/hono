@@ -55,13 +55,29 @@ function buildConditions<T>(routes: Routes<T>): string {
       children: [],
     }
 
-    for (let pathIndex = 0, len = pathTree.length; pathIndex < len; pathIndex++) {
-      const { type } = pathTree[pathIndex]
+    let pathIndex = 0
+
+    for (let pathTreeIndex = 0, len = pathTree.length; pathTreeIndex < len; pathTreeIndex++) {
+      const { type, value } = pathTree[pathTreeIndex]
 
       if (type === "separator") {
+        pathIndex++
+      }else if (type === "static") {
         sourceBranch.children.push({
           type: "condition",
-          condition: null,
+          condition: `${variables.pathParts}[${pathIndex}] === '${value}'`,
+          children: [],
+        })
+      }else if (type === "dynamic") {
+        sourceBranch.children.push({
+          type: "condition",
+          condition: `${variables.pathParts}[${pathIndex}] !== undefined`,
+          children: [],
+        })
+      }else if (type === "wildcard") {
+        sourceBranch.children.push({
+          type: "condition",
+          condition: `${variables.pathParts}.length >= ${pathIndex}`,
           children: [],
         })
       }

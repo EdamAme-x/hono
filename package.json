@@ -289,6 +289,11 @@
       "import": "./dist/router/pattern-router/index.js",
       "require": "./dist/cjs/router/pattern-router/index.js"
     },
+    "./router/prepared-router": {
+      "types": "./dist/types/router/prepared-router/index.d.ts",
+      "import": "./dist/router/prepared-router/index.js",
+      "require": "./dist/cjs/router/prepared-router/index.js"
+    },
     "./router/linear-router": {
       "types": "./dist/types/router/linear-router/index.d.ts",
       "import": "./dist/router/linear-router/index.js",
