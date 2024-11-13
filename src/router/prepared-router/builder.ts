@@ -5,6 +5,7 @@ const variables = {
   path: 'path',
   matchResult: 'matchResult',
   emptyParams: 'emptyParams',
+  params: 'params',
   pathParts: 'pathParts',
 }
 
@@ -58,26 +59,40 @@ function buildConditions<T>(routes: Routes<T>): string {
     let pathIndex = 0
 
     for (let pathTreeIndex = 0, len = pathTree.length; pathTreeIndex < len; pathTreeIndex++) {
-      const { type, value } = pathTree[pathTreeIndex]
+      const pathElement = pathTree[pathTreeIndex]
 
-      if (type === "separator") {
+      if (pathElement.type === "separator") {
         pathIndex++
-      }else if (type === "static") {
+      }else if (pathElement.type === "static") {
         sourceBranch.children.push({
           type: "condition",
-          condition: `${variables.pathParts}[${pathIndex}] === '${value}'`,
+          condition: `${variables.pathParts}[${pathIndex}] === '${pathElement.value}'`,
+          children: [
+            {
+              type: "process",
+              process: `${variables.matchResult}.push([${handlerIndex}, ${variables.emptyParams}]);`,
+              children: [],
+            }
+          ],
+        })
+      }else if (pathElement.type === "dynamic") {
+        sourceBranch.children.push({
+          type: "condition",
+          condition: `${variables.pathParts}[${pathIndex}].length === ${pathIndex + 1}`,
           children: [],
         })
-      }else if (type === "dynamic") {
+
+        if (pathElement.regex) {
+          sourceBranch.children.push({
+            type: "condition",
+            condition: `/${pathElement.regex}/.test(${variables.pathParts}[${pathIndex}])`,
+            children: [],
+          })
+        }
+      }else if (pathElement.type === "wildcard") {
         sourceBranch.children.push({
           type: "condition",
-          condition: `${variables.pathParts}[${pathIndex}] !== undefined`,
-          children: [],
-        })
-      }else if (type === "wildcard") {
-        sourceBranch.children.push({
-          type: "condition",
-          condition: `${variables.pathParts}.length >= ${pathIndex}`,
+          condition: `${variables.pathParts}.length >= ${pathIndex + 1}`,
           children: [],
         })
       }
