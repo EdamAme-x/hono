@@ -8,6 +8,7 @@ type MRoutes = MRoute[]
 const variables = {
   matchResult: 'matchResult',
   emptyParams: 'emptyParams',
+  pathParts: 'pathParts',
 }
 
 export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
