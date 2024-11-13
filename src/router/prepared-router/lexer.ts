@@ -15,12 +15,12 @@ export type PathDynamic = {
 }
 
 export 
-type PathAlways = {
-  type: 'always'
+type PathWildcard = {
+  type: 'wildcard'
   value: '*'
 }
 
-export type PathElement = PathSeparator | PathStatic | PathDynamic | PathAlways
+export type PathElement = PathSeparator | PathStatic | PathDynamic | PathWildcard
 
 export type PathTree = PathElement[]
 
@@ -136,7 +136,7 @@ export const pathLexer = (path: string): PathTree => {
         continue
       case '*':
         pathTree.push({
-          type: 'always',
+          type: 'wildcard',
           value: '*',
         })
         continue
