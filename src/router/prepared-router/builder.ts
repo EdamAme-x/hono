@@ -1,3 +1,4 @@
+import { METHOD_NAME_ALL } from '../../router'
 import type { PreparedMatch, Routes } from './router'
 
 const variables = {
@@ -10,6 +11,15 @@ const variables = {
 }
 
 export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
+  const methodWithRoutes: Record<string, Routes<T>> = {}
+
+  for (const route of routes) {
+    if (!methodWithRoutes[route[0]]) {
+      methodWithRoutes[route[0]] = []
+    }
+    methodWithRoutes[route[0]].push(route)
+  }
+
   return new Function(
     'method',
     'path',
@@ -17,7 +27,17 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
         const ${variables.matchResult} = [];
         const ${variables.emptyParams} = Object.create(null);
 
-        ${buildConditions(routes)}
+        ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
+
+        ${(() => {
+          delete methodWithRoutes[METHOD_NAME_ALL]
+
+          const conditions = []
+
+          for (const [method, routes] of Object.entries(methodWithRoutes)) {
+            conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
+          }
+        })()}
 
         ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
 
