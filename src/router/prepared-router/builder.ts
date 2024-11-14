@@ -26,82 +26,118 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   ) as PreparedMatch
 }
 
-type SourceTree<T extends "condition" | "process" = "condition" | "process"> = ((
-  T extends "condition" ? {
-    type: T
-    condition: string | null
-    children: SourceTree[]
-  } : never
-) | (
-    T extends "process" ? {
-      type: T
-      process: string
-      children: SourceTree[]
-    } : never
-  ))
-
 /**
- * /abc => length =>1 && 0 => abc
+ * /abc => length = 1 && [0] = abc
  */
+interface SourceTree {
+  conditions: {
+    mark: "separator" | "static" | "dynamic" | "dynamic-regex" | "wildcard",
+    condition: string
+  }[]
+  process?: string
+}
 
 function buildConditions<T>(routes: Routes<T>): string {
-  let sourceTree: SourceTree[] = []
+  const sourceTrees: SourceTree[] = []
 
   const buildSourceTree = (route: Routes<T>[number], handlerIndex: number) => {
-    const [method, [path, pathTree]] = route
+    const pathTree = route[1][1]
 
-    const sourceBranch: SourceTree<"condition"> = {
-      type: "condition",
-      condition: method === "ALL" ? null : `${variables.method} === '${method}'`,
-      children: [],
+    const sourceTree: SourceTree = {
+      conditions: [],
     }
 
     let pathIndex = 0
+    let params: Record<string, number> = {}
 
-    for (let pathTreeIndex = 0, len = pathTree.length; pathTreeIndex < len; pathTreeIndex++) {
-      const pathElement = pathTree[pathTreeIndex]
-
-      if (pathElement.type === "separator") {
+    for (const pathTreePart of pathTree) {
+      if (pathTreePart.type === 'separator') {
         pathIndex++
-      }else if (pathElement.type === "static") {
-        sourceBranch.children.push({
-          type: "condition",
-          condition: `${variables.pathParts}[${pathIndex}] === '${pathElement.value}'`,
-          children: [
+        sourceTree.conditions.push(
+          {
+            mark: "separator",
+            condition:  `(${variables.pathParts}.length === ${pathIndex + 1})`
+          }
+        )
+      } else if (pathTreePart.type === 'static') {
+        sourceTree.conditions.push(
+          {
+            mark: "static",
+            condition: `(${variables.pathParts}[${pathIndex}] === '${pathTreePart.value}')`
+          }
+        )
+      } else if (pathTreePart.type === 'dynamic') {
+        sourceTree.conditions.push(
+          {
+            mark: "dynamic",
+            condition: `(${variables.pathParts}.length === ${pathIndex + 1})`
+          }
+        )
+        if (pathTreePart.regex) {
+          sourceTree.conditions.push(
             {
-              type: "process",
-              process: `${variables.matchResult}.push([${handlerIndex}, ${variables.emptyParams}]);`,
-              children: [],
+              mark: "dynamic-regex",
+              condition: `(/${pathTreePart.regex}/.test(${variables.pathParts}[${pathIndex}]))`
             }
-          ],
-        })
-      }else if (pathElement.type === "dynamic") {
-        sourceBranch.children.push({
-          type: "condition",
-          condition: `${variables.pathParts}[${pathIndex}].length === ${pathIndex + 1}`,
-          children: [],
-        })
-
-        if (pathElement.regex) {
-          sourceBranch.children.push({
-            type: "condition",
-            condition: `/${pathElement.regex}/.test(${variables.pathParts}[${pathIndex}])`,
-            children: [],
-          })
+          )
         }
-      }else if (pathElement.type === "wildcard") {
-        sourceBranch.children.push({
-          type: "condition",
-          condition: `${variables.pathParts}.length >= ${pathIndex + 1}`,
-          children: [],
-        })
+        params[pathTreePart.value] = pathIndex
+      } else if (pathTreePart.type === 'wildcard') {
+        sourceTree.conditions.push(
+          {
+            mark: "wildcard",
+            condition: `(${variables.pathParts}.length >= ${pathIndex})`
+          }
+        )
       }
     }
+
+    const isAlreadyMarked: string[] = []
+
+    const conditions: SourceTree["conditions"] = []
+
+    // remove duplicated conditions
+    for (let i = sourceTree.conditions.length - 1; i >= 0; i--) {
+      if (isAlreadyMarked.includes(sourceTree.conditions[i].mark)) {
+        continue
+      } else {
+        if (["separator", "wildcard"].includes(sourceTree.conditions[i].mark)) {
+          isAlreadyMarked.push(sourceTree.conditions[i].mark)
+        }
+        conditions.push(sourceTree.conditions[i])
+      }
+    }
+
+    // remove if wildcard or dynamic, remove separator
+
+    let isHasWildcardOrDynamic = false
+
+    for (let i = conditions.length - 1; i >= 0; i--) {
+      if (["wildcard", "dynamic"].includes(conditions[i].mark)) {
+        isHasWildcardOrDynamic = true
+      }
+    }
+
+    if (isHasWildcardOrDynamic) {
+      for (let i = conditions.length - 1; i >= 0; i--) {
+        if (conditions[i].mark === "separator") {
+          conditions.splice(i, 1)
+        }
+      }
+    }
+
+    sourceTree.conditions = conditions
+    sourceTree.process = `${variables.matchResult}.push([${handlerIndex
+      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, pathIndex]) => `${key}: ${variables.pathParts}[${pathIndex}}`).join(',') + "}" : variables.emptyParams}]);`
+
+    return sourceTree
   }
 
   for (let i = 0, len = routes.length; i < len; i++) {
-    buildSourceTree(routes[i], i)
+    sourceTrees.push(buildSourceTree(routes[i], i))
   }
 
-  return `const ${variables.pathParts} = ${variables.path}.split('/').slice(1);`
+  console.table(sourceTrees)
+
+  return `const ${variables.pathParts} = ${variables.path}.split('/');`
 }
