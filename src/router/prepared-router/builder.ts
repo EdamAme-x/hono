@@ -129,7 +129,6 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
 
     const cleanedConditions: SourceTree["conditions"] = []
-
     for (let i = conditions.length - 1; i >= 0; i--) {
       if (!isHasWildcardOrDynamic || !["separator", "dynamic"].includes(conditions[i].mark)) {
         cleanedConditions.push(conditions[i])
@@ -147,14 +146,10 @@ function buildConditions<T>(routes: Routes<T>): string {
     sourceTrees.push(buildSourceTree(routes[i], i))
   }
 
-  console.table(sourceTrees)
-
   const source = sourceTrees.map((sourceTree) => {
     const condition = sourceTree.conditions.map((condition) => condition.condition).join(' && ')
     return `if (${condition}) { ${sourceTree.process} }`
   }).join('\n')
 
-  console.log(source)
-
-  return `const ${variables.pathParts} = ${variables.path}.split('/');console.log(${variables.pathParts});${source}`
+  return `const ${variables.pathParts} = ${variables.path}.split('/');${source}`
 }
