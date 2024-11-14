@@ -31,7 +31,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
  */
 interface SourceTree {
   conditions: {
-    mark: "separator" | "static" | "dynamic" | "dynamic-regex" | "wildcard",
+    mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-regex" | "wildcard",
     condition: string
   }[]
   process?: string
@@ -53,12 +53,22 @@ function buildConditions<T>(routes: Routes<T>): string {
     for (const pathTreePart of pathTree) {
       if (pathTreePart.type === 'separator') {
         pathIndex++
+
         sourceTree.conditions.push(
           {
             mark: "separator",
             condition:  `(${variables.pathParts}.length === ${pathIndex + 1})`
           }
         )
+
+        if (pathTree[pathIndex] === undefined) {
+          sourceTree.conditions.push(
+            {
+              mark: "separator-empty",
+              condition: `(${variables.pathParts}[${pathIndex}] === '')`
+            }
+          )   
+        }
       } else if (pathTreePart.type === 'static') {
         sourceTree.conditions.push(
           {
@@ -146,5 +156,5 @@ function buildConditions<T>(routes: Routes<T>): string {
 
   console.log(source)
 
-  return `const ${variables.pathParts} = ${variables.path}.split('/');${source}`
+  return `const ${variables.pathParts} = ${variables.path}.split('/');console.log(${variables.pathParts});${source}`
 }
