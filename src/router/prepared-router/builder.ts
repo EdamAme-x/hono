@@ -57,7 +57,7 @@ function buildConditions<T>(routes: Routes<T>): string {
         sourceTree.conditions.push(
           {
             mark: "separator",
-            condition:  `(${variables.pathParts}.length === ${pathIndex + 1})`
+            condition: `(${variables.pathParts}.length === ${pathIndex + 1})`
           }
         )
 
@@ -67,7 +67,7 @@ function buildConditions<T>(routes: Routes<T>): string {
               mark: "separator-empty",
               condition: `(${variables.pathParts}[${pathIndex}] === '')`
             }
-          )   
+          )
         }
       } else if (pathTreePart.type === 'static') {
         sourceTree.conditions.push(
@@ -118,7 +118,7 @@ function buildConditions<T>(routes: Routes<T>): string {
       }
     }
 
-    // remove if wildcard or dynamic, remove separator
+    // remove if wildcard or dynamic, remove separator abd dynamic
 
     let isHasWildcardOrDynamic = false
 
@@ -128,15 +128,15 @@ function buildConditions<T>(routes: Routes<T>): string {
       }
     }
 
-    if (isHasWildcardOrDynamic) {
-      for (let i = conditions.length - 1; i >= 0; i--) {
-        if (conditions[i].mark === "separator") {
-          conditions.splice(i, 1)
-        }
+    const cleanedConditions: SourceTree["conditions"] = []
+
+    for (let i = conditions.length - 1; i >= 0; i--) {
+      if (!isHasWildcardOrDynamic || !["separator", "dynamic"].includes(conditions[i].mark)) {
+        cleanedConditions.push(conditions[i])
       }
     }
 
-    sourceTree.conditions = conditions.reverse()
+    sourceTree.conditions = cleanedConditions
     sourceTree.process = `${variables.matchResult}.push([${handlerIndex
       }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, pathIndex]) => `${key}: ${variables.pathParts}[${pathIndex}]`).join(',') + "}" : variables.emptyParams}])`
 
