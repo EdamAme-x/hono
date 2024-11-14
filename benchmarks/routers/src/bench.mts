@@ -27,6 +27,8 @@ const routers: RouterInterface[] = [
   rou3Router,
 ]
 
+preparedRouter.match({ method: 'GET', path: '/user' })
+regExpRouter.match({ method: 'GET', path: '/user' })
 medleyRouter.match({ method: 'GET', path: '/user' })
 
 const routes: (Route & { name: string })[] = [
