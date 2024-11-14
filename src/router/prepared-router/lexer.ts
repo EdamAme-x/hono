@@ -14,8 +14,7 @@ export type PathDynamic = {
   regex: string
 }
 
-export 
-type PathWildcard = {
+export type PathWildcard = {
   type: 'wildcard'
   value: '*'
 }

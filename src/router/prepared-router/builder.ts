@@ -126,9 +126,9 @@ function buildConditions<T>(routes: Routes<T>): string {
       }
     }
 
-    sourceTree.conditions = conditions
+    sourceTree.conditions = conditions.reverse()
     sourceTree.process = `${variables.matchResult}.push([${handlerIndex
-      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, pathIndex]) => `${key}: ${variables.pathParts}[${pathIndex}}`).join(',') + "}" : variables.emptyParams}]);`
+      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, pathIndex]) => `${key}: ${variables.pathParts}[${pathIndex}]`).join(',') + "}" : variables.emptyParams}])`
 
     return sourceTree
   }
@@ -139,5 +139,12 @@ function buildConditions<T>(routes: Routes<T>): string {
 
   console.table(sourceTrees)
 
-  return `const ${variables.pathParts} = ${variables.path}.split('/');`
+  const source = sourceTrees.map((sourceTree) => {
+    const condition = sourceTree.conditions.map((condition) => condition.condition).join(' && ')
+    return `if (${condition}) { ${sourceTree.process} }`
+  }).join('\n')
+
+  console.log(source)
+
+  return `const ${variables.pathParts} = ${variables.path}.split('/');${source}`
 }
