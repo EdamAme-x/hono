@@ -12,8 +12,8 @@ import { trekRouter } from './trek-router.mts'
 import { rou3Router } from './rou3.mts'
 
 const routers: RouterInterface[] = [
-  preparedRouter,
   regExpRouter,
+  preparedRouter,
   trieRouter,
   patternRouter,
   medleyRouter,
