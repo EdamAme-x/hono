@@ -20,29 +20,28 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
     methodWithRoutes[route[0]].push(route)
   }
 
+  const source = `return (() => {
+      const ${variables.matchResult} = [];
+      const ${variables.emptyParams} = Object.create(null);
+      ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
+      ${(() => {
+        delete methodWithRoutes[METHOD_NAME_ALL]
+        const conditions = []
+        for (const [method, routes] of Object.entries(methodWithRoutes)) {
+          conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
+        }
+
+        return conditions.join('\n')
+      })()}
+      ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
+
+      return ${variables.matchResult};
+    })()`
+
   return new Function(
     'method',
     'path',
-    `return (() => {
-        const ${variables.matchResult} = [];
-        const ${variables.emptyParams} = Object.create(null);
-
-        ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
-
-        ${(() => {
-          delete methodWithRoutes[METHOD_NAME_ALL]
-
-          const conditions = []
-
-          for (const [method, routes] of Object.entries(methodWithRoutes)) {
-            conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
-          }
-        })()}
-
-        ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
-
-        return ${variables.matchResult};
-      })()`
+    source
   ) as PreparedMatch
 }
 
@@ -51,7 +50,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
  */
 interface SourceTree {
   conditions: {
-    mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-regex" | "wildcard",
+    mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-param" | "dynamic-regex" | "wildcard",
     condition: string
   }[]
   process?: string
@@ -101,6 +100,12 @@ function buildConditions<T>(routes: Routes<T>): string {
           {
             mark: "dynamic",
             condition: `(${variables.pathParts}.length === ${pathIndex + 1})`
+          }
+        )
+        sourceTree.conditions.push(
+          {
+            mark: "dynamic-param",
+            condition: `(${variables.pathParts}[${pathIndex}] !== undefined)`
           }
         )
         if (pathTreePart.regex) {
