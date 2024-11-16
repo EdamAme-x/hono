@@ -44,8 +44,6 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
       return ${variables.matchResult};
     })()`
 
-  console.log(source)
-
   return new Function(
     'method',
     'path',
