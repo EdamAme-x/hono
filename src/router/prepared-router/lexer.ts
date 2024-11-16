@@ -136,7 +136,7 @@ export const pathLexer = (path: string): PathTree => {
       case '*':
         pathTree.push({
           type: 'wildcard',
-          value: '*',
+          value: char,
         })
         continue
       default:

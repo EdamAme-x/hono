@@ -28,14 +28,14 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
       ${(() => {
-        delete methodWithRoutes[METHOD_NAME_ALL]
-        const conditions = []
-        for (const [method, routes] of Object.entries(methodWithRoutes)) {
-          conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
-        }
+      delete methodWithRoutes[METHOD_NAME_ALL]
+      const conditions = []
+      for (const [method, routes] of Object.entries(methodWithRoutes)) {
+        conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
+      }
 
-        return conditions.join('\n')
-      })()}
+      return conditions.join('\n')
+    })()}
       
       if (${variables.matchResult}.length > 1) {
         ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
@@ -113,9 +113,8 @@ function buildConditions<T>(routes: Routes<T>): string {
           {
             mark: "static",
             condition: {
-              left: `${variables.pathParts}${
-                isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
-              }`,
+              left: `${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+                }`,
               operator: "===",
               right: `'${pathTreePart.value}'`
             }
@@ -136,9 +135,8 @@ function buildConditions<T>(routes: Routes<T>): string {
           {
             mark: "dynamic-param",
             condition: {
-              left: `${variables.pathParts}${
-                isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
-              }`,
+              left: `${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+                }`,
               operator: "!==",
               right: `undefined`
             }
@@ -149,9 +147,8 @@ function buildConditions<T>(routes: Routes<T>): string {
             {
               mark: "dynamic-regex",
               condition: {
-                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${
-                  isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
-                }))`,
+                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+                  }))`,
                 operator: "===",
                 right: `true`
               }
@@ -160,7 +157,7 @@ function buildConditions<T>(routes: Routes<T>): string {
         }
         if (isEncounteredWildcard) {
           params[pathTreePart.value] = `${variables.pathParts}.slice(-1)`
-        }else {
+        } else {
           params[pathTreePart.value] = `${variables.pathParts}[${pathIndex}]`
         }
       } else if (pathTreePart.type === 'wildcard') {
@@ -240,9 +237,66 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
   */
 
-  const source = conditionTrees.map((conditionTree) => {
-    return `if (${conditionTree.conditions.map((c) => `(${c.condition.left} ${c.condition.operator} ${c.condition.right})`).join(' && ')}) {${conditionTree.process}}`
-  }).join('\n')
+  const isEqualCondition = (a: Condition, b: Condition) => {
+    return a.condition.left === b.condition.left && a.condition.operator === b.condition.operator && a.condition.right === b.condition.right
+  }
 
-  return source
+  const buildSource = (conditionTrees: ConditionTree[]): string => {
+    const getSortedConditions = (): Condition[] => {
+      const conditions: Condition[] = []
+
+      for (const conditionTree of conditionTrees) {
+        conditions.push(...conditionTree.conditions)
+      }
+
+      const countMap: [Condition, number][] = []
+
+      for (const condition of conditions) {
+        const index = countMap.findIndex(([c]) => isEqualCondition(c, condition))
+        if (index === -1) {
+          countMap.push([condition, 1])
+        } else {
+          countMap[index][1]++
+        }
+      }
+
+      return countMap.sort((a, b) => b[1] - a[1]).map(([c]) => c)
+    }
+
+    const sortedConditions = getSortedConditions()
+
+    if (!sortedConditions.length) {
+      return conditionTrees.map((conditionTree) => conditionTree.process).join('\n')
+    }
+
+    const mostCommonCondition = sortedConditions[0]
+
+    const [includeConditionTrees, excludeConditionTrees] = conditionTrees.reduce(([include, exclude], conditionTree) => {
+      const conditionIndex = conditionTree.conditions.findIndex((c) => isEqualCondition(c, mostCommonCondition))
+
+      if (conditionIndex !== -1) {
+        conditionTree.conditions.splice(conditionIndex, 1)
+
+        return [[...include, conditionTree], exclude]
+      } else {
+        return [include, [...exclude, conditionTree]]
+      }
+    }, [[], []] as [ConditionTree[], ConditionTree[]])
+
+    if (!includeConditionTrees.length) {
+      return buildSource(excludeConditionTrees)
+    }
+
+    const noLengthConditionTrees = includeConditionTrees.filter((conditionTree) => !conditionTree.conditions.length)
+
+    return `
+      if (${mostCommonCondition.condition.left} ${mostCommonCondition.condition.operator} ${mostCommonCondition.condition.right}) {
+        ${noLengthConditionTrees.map((conditionTree) => conditionTree.process).join('\n')}
+        ${buildSource(includeConditionTrees.filter((conditionTree) => !noLengthConditionTrees.includes(conditionTree)))}
+      }
+      ${buildSource(excludeConditionTrees)}
+    `
+  }
+
+  return buildSource(conditionTrees)
 }

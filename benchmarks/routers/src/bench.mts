@@ -69,6 +69,8 @@ const routes: (Route & { name: string })[] = [
   },
 ]
 
+process.exit(0)
+
 for (const route of routes) {
   group(`${route.name} - ${route.method} ${route.path}`, () => {
     for (const router of routers) {
