@@ -1,3 +1,4 @@
+import path from 'path'
 import { METHOD_NAME_ALL } from '../../router'
 import type { PreparedMatch, Routes } from './router'
 
@@ -23,6 +24,8 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   const source = `return (() => {
       const ${variables.matchResult} = [];
       const ${variables.emptyParams} = Object.create(null);
+      const ${variables.pathParts} = ${variables.path}.split('/');
+
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
       ${(() => {
         delete methodWithRoutes[METHOD_NAME_ALL]
@@ -33,10 +36,15 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
 
         return conditions.join('\n')
       })()}
-      ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
+      
+      if (${variables.matchResult}.length > 1) {
+        ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
+      }
 
       return ${variables.matchResult};
     })()`
+
+  console.log(source)
 
   return new Function(
     'method',
@@ -45,83 +53,126 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   ) as PreparedMatch
 }
 
-/**
- * /abc => length = 1 && [0] = abc
- */
-interface SourceTree {
-  conditions: {
-    mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-param" | "dynamic-regex" | "wildcard",
-    condition: string
-  }[]
+interface Condition {
+  mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-param" | "dynamic-regex" | "wildcard",
+  condition: {
+    left: string
+    operator: "===" | "!==" | ">="
+    right?: string
+  }
+}
+
+interface ConditionTree {
+  conditions: Condition[]
   process?: string
 }
 
 function buildConditions<T>(routes: Routes<T>): string {
-  const sourceTrees: SourceTree[] = []
+  const conditionTrees: ConditionTree[] = []
 
-  const buildSourceTree = (route: Routes<T>[number], handlerIndex: number) => {
+  const buildConditionTree = (route: Routes<T>[number], handlerIndex: number) => {
     const pathTree = route[1][1]
 
-    const sourceTree: SourceTree = {
+    const conditionTree: ConditionTree = {
       conditions: [],
     }
 
     let pathIndex = 0
-    let params: Record<string, number> = {}
+    let params: Record<string, string> = {}
+    let isEncounteredWildcard = false
 
     for (const pathTreePart of pathTree) {
       if (pathTreePart.type === 'separator') {
         pathIndex++
 
-        sourceTree.conditions.push(
+        conditionTree.conditions.push(
           {
             mark: "separator",
-            condition: `(${variables.pathParts}.length === ${pathIndex + 1})`
+            condition: {
+              left: `${variables.pathParts}.length`,
+              operator: "===",
+              right: `${pathIndex + 1}`
+            }
           }
         )
 
         if (pathTree[pathIndex] === undefined) {
-          sourceTree.conditions.push(
+          conditionTree.conditions.push(
             {
               mark: "separator-empty",
-              condition: `(${variables.pathParts}[${pathIndex}] === '')`
+              condition: {
+                left: `${variables.pathParts}[${pathIndex}]`,
+                operator: "===",
+                right: `''`
+              }
             }
           )
         }
       } else if (pathTreePart.type === 'static') {
-        sourceTree.conditions.push(
+        conditionTree.conditions.push(
           {
             mark: "static",
-            condition: `(${variables.pathParts}[${pathIndex}] === '${pathTreePart.value}')`
+            condition: {
+              left: `${variables.pathParts}${
+                isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+              }`,
+              operator: "===",
+              right: `'${pathTreePart.value}'`
+            }
           }
         )
       } else if (pathTreePart.type === 'dynamic') {
-        sourceTree.conditions.push(
+        conditionTree.conditions.push(
           {
             mark: "dynamic",
-            condition: `(${variables.pathParts}.length === ${pathIndex + 1})`
+            condition: {
+              left: `${variables.pathParts}.length`,
+              operator: "===",
+              right: `${pathIndex + 1}`
+            }
           }
         )
-        sourceTree.conditions.push(
+        conditionTree.conditions.push(
           {
             mark: "dynamic-param",
-            condition: `(${variables.pathParts}[${pathIndex}] !== undefined)`
+            condition: {
+              left: `${variables.pathParts}${
+                isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+              }`,
+              operator: "!==",
+              right: `undefined`
+            }
           }
         )
         if (pathTreePart.regex) {
-          sourceTree.conditions.push(
+          conditionTree.conditions.push(
             {
               mark: "dynamic-regex",
-              condition: `(/${pathTreePart.regex}/.test(${variables.pathParts}[${pathIndex}]))`
+              condition: {
+                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${
+                  isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+                }))`,
+                operator: "===",
+                right: `true`
+              }
             }
           )
         }
-        params[pathTreePart.value] = pathIndex
+        if (isEncounteredWildcard) {
+          params[pathTreePart.value] = `${variables.pathParts}.slice(-1)`
+        }else {
+          params[pathTreePart.value] = `${variables.pathParts}[${pathIndex}]`
+        }
       } else if (pathTreePart.type === 'wildcard') {
-        sourceTree.conditions.push(
+        isEncounteredWildcard = true
+        conditionTree.conditions.push(
           {
             mark: "wildcard",
-            condition: `(${variables.pathParts}.length >= ${pathIndex})`
+            condition: {
+              left: `${variables.pathParts}.length`,
+              operator: ">=",
+              right: `${pathIndex}`
+            }
           }
         )
       }
@@ -129,52 +180,69 @@ function buildConditions<T>(routes: Routes<T>): string {
 
     const isAlreadyMarked: string[] = []
 
-    const conditions: SourceTree["conditions"] = []
+    const uniqueConditions: Condition[] = []
 
-    // remove duplicated conditions
-    for (let i = sourceTree.conditions.length - 1; i >= 0; i--) {
-      if (isAlreadyMarked.includes(sourceTree.conditions[i].mark)) {
+    // note: remove duplicated conditions
+    for (let i = conditionTree.conditions.length - 1; i >= 0; i--) {
+      if (isAlreadyMarked.includes(conditionTree.conditions[i].mark)) {
         continue
       } else {
-        if (["separator", "wildcard"].includes(sourceTree.conditions[i].mark)) {
-          isAlreadyMarked.push(sourceTree.conditions[i].mark)
+        if (["separator", "wildcard"].includes(conditionTree.conditions[i].mark)) {
+          isAlreadyMarked.push(conditionTree.conditions[i].mark)
         }
-        conditions.push(sourceTree.conditions[i])
+        uniqueConditions.push(conditionTree.conditions[i])
       }
     }
 
-    // remove if wildcard or dynamic, remove separator abd dynamic
+    // note: remove if wildcard or dynamic, remove separator abd dynamic
 
     let isHasWildcardOrDynamic = false
 
-    for (let i = conditions.length - 1; i >= 0; i--) {
-      if (["wildcard", "dynamic"].includes(conditions[i].mark)) {
+    for (let i = uniqueConditions.length - 1; i >= 0; i--) {
+      if (["wildcard", "dynamic"].includes(uniqueConditions[i].mark)) {
         isHasWildcardOrDynamic = true
       }
     }
 
-    const cleanedConditions: SourceTree["conditions"] = []
-    for (let i = conditions.length - 1; i >= 0; i--) {
-      if (!isHasWildcardOrDynamic || !["separator", "dynamic"].includes(conditions[i].mark)) {
-        cleanedConditions.push(conditions[i])
+    const optimizedConditions: ConditionTree["conditions"] = []
+    for (let i = uniqueConditions.length - 1; i >= 0; i--) {
+      if (!isHasWildcardOrDynamic || !["separator", "dynamic"].includes(uniqueConditions[i].mark)) {
+        optimizedConditions.push(uniqueConditions[i])
       }
     }
 
-    sourceTree.conditions = cleanedConditions
-    sourceTree.process = `${variables.matchResult}.push([${handlerIndex
-      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, pathIndex]) => `${key}: ${variables.pathParts}[${pathIndex}]`).join(',') + "}" : variables.emptyParams}])`
+    conditionTree.conditions = optimizedConditions
+    conditionTree.process = `${variables.matchResult}.push([${handlerIndex
+      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, value]) => `${key}: ${value}`).join(',') + "}" : variables.emptyParams}])`
 
-    return sourceTree
+    return conditionTree
   }
 
   for (let i = 0, len = routes.length; i < len; i++) {
-    sourceTrees.push(buildSourceTree(routes[i], i))
+    conditionTrees.push(buildConditionTree(routes[i], i))
   }
 
-  const source = sourceTrees.map((sourceTree) => {
-    const condition = sourceTree.conditions.map((condition) => condition.condition).join(' && ')
-    return `if (${condition}) { ${sourceTree.process} }`
+  /*
+    if (A & B) {
+      ...
+    }else if (A & C) {
+      ...
+    }
+
+    to 
+
+    if (A) {
+      if (B) {
+        ...
+      }else if (C) {
+        ...
+      }
+    }
+  */
+
+  const source = conditionTrees.map((conditionTree) => {
+    return `if (${conditionTree.conditions.map((c) => `(${c.condition.left} ${c.condition.operator} ${c.condition.right})`).join(' && ')}) {${conditionTree.process}}`
   }).join('\n')
 
-  return `const ${variables.pathParts} = ${variables.path}.split('/');${source}`
+  return source
 }
