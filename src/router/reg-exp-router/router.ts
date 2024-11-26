@@ -71,7 +71,7 @@ function buildMatcherFromPreprocessedRoutes<T>(
     }
 
     handlerData[j] = handlers.map(([h, paramCount]) => {
-      const paramIndexMap: ParamIndexMap = Object.create(null)
+      const paramIndexMap: ParamIndexMap = {}
       paramCount -= 1
       for (; paramCount >= 0; paramCount--) {
         const [key, value] = paramAssoc[paramCount]

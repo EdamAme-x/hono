@@ -19,7 +19,7 @@ export class Node<T> {
   #children: Record<string, Node<T>>
   #patterns: Pattern[]
   #order: number = 0
-  #params: Record<string, string> = Object.create(null)
+  #params: Record<string, string> = {}
 
   constructor(method?: string, handler?: T, children?: Record<string, Node<T>>) {
     this.#children = children || Object.create(null)
@@ -90,7 +90,7 @@ export class Node<T> {
       const handlerSet = (m[method] || m[METHOD_NAME_ALL]) as HandlerParamsSet<T>
       const processedSet: Record<number, boolean> = {}
       if (handlerSet !== undefined) {
-        handlerSet.params = Object.create(null)
+        handlerSet.params = {}
         for (let i = 0, len = handlerSet.possibleKeys.length; i < len; i++) {
           const key = handlerSet.possibleKeys[i]
           const processed = processedSet[handlerSet.score]
@@ -107,7 +107,7 @@ export class Node<T> {
 
   search(method: string, path: string): [[T, Params][]] {
     const handlerSets: HandlerParamsSet<T>[] = []
-    this.#params = Object.create(null)
+    this.#params = {}
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const curNode: Node<T> = this
@@ -129,17 +129,10 @@ export class Node<T> {
             // '/hello/*' => match '/hello'
             if (nextNode.#children['*']) {
               handlerSets.push(
-                ...this.#getHandlerSets(
-                  nextNode.#children['*'],
-                  method,
-                  node.#params,
-                  Object.create(null)
-                )
+                ...this.#getHandlerSets(nextNode.#children['*'], method, node.#params, {})
               )
             }
-            handlerSets.push(
-              ...this.#getHandlerSets(nextNode, method, node.#params, Object.create(null))
-            )
+            handlerSets.push(...this.#getHandlerSets(nextNode, method, node.#params, {}))
           } else {
             tempNodes.push(nextNode)
           }
@@ -155,9 +148,7 @@ export class Node<T> {
           if (pattern === '*') {
             const astNode = node.#children['*']
             if (astNode) {
-              handlerSets.push(
-                ...this.#getHandlerSets(astNode, method, node.#params, Object.create(null))
-              )
+              handlerSets.push(...this.#getHandlerSets(astNode, method, node.#params, {}))
               tempNodes.push(astNode)
             }
             continue
