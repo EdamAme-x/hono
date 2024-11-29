@@ -6,34 +6,34 @@ import { getPattern, splitPath, splitRoutingPath } from '../../utils/url'
 type HandlerSet<T> = {
   handler: T
   possibleKeys: string[]
-  score: number
+  order: number
 }
 
 type HandlerParamsSet<T> = HandlerSet<T> & {
   params: Record<string, string>
 }
 
+const emptyParams: Record<string, string> = Object.create(null)
+
 export class Node<T> {
-  #methods: Record<string, HandlerSet<T>>[]
+  #methods: Record<string, HandlerSet<T>>[] = []
 
   #children: Record<string, Node<T>>
-  #patterns: Pattern[]
+  #patterns: Pattern[] = []
   #order: number = 0
   #params: Record<string, string> = Object.create(null)
 
   constructor(method?: string, handler?: T, children?: Record<string, Node<T>>) {
     this.#children = children || Object.create(null)
-    this.#methods = []
     if (method && handler) {
       const m: Record<string, HandlerSet<T>> = Object.create(null)
-      m[method] = { handler, possibleKeys: [], score: 0 }
+      m[method] = { handler, possibleKeys: [], order: 0 }
       this.#methods = [m]
     }
-    this.#patterns = []
   }
 
   insert(method: string, path: string, handler: T): Node<T> {
-    this.#order = ++this.#order
+    this.#order++
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let curNode: Node<T> = this
@@ -67,8 +67,8 @@ export class Node<T> {
 
     const handlerSet: HandlerSet<T> = {
       handler,
-      possibleKeys: possibleKeys.filter((v, i, a) => a.indexOf(v) === i),
-      score: this.#order,
+      possibleKeys: possibleKeys.filter((key, i) => possibleKeys.indexOf(key) === i),
+      order: this.#order,
     }
 
     m[method] = handlerSet
@@ -77,7 +77,6 @@ export class Node<T> {
     return curNode
   }
 
-  // getHandlerSets
   #getHandlerSets(
     node: Node<T>,
     method: string,
@@ -88,15 +87,16 @@ export class Node<T> {
     for (let i = 0, len = node.#methods.length; i < len; i++) {
       const m = node.#methods[i]
       const handlerSet = (m[method] || m[METHOD_NAME_ALL]) as HandlerParamsSet<T>
-      const processedSet: Record<number, boolean> = {}
       if (handlerSet !== undefined) {
+        const processedSet: Record<number, boolean> = {}
+
         handlerSet.params = Object.create(null)
         for (let i = 0, len = handlerSet.possibleKeys.length; i < len; i++) {
           const key = handlerSet.possibleKeys[i]
-          const processed = processedSet[handlerSet.score]
+          const processed = processedSet[handlerSet.order]
           handlerSet.params[key] =
             params[key] && !processed ? params[key] : nodeParams[key] ?? params[key]
-          processedSet[handlerSet.score] = true
+          processedSet[handlerSet.order] = true
         }
 
         handlerSets.push(handlerSet)
@@ -110,8 +110,7 @@ export class Node<T> {
     this.#params = Object.create(null)
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const curNode: Node<T> = this
-    let curNodes = [curNode]
+    let curNodes: Node<T>[] = [this]
     const parts = splitPath(path)
 
     for (let i = 0, len = parts.length; i < len; i++) {
@@ -129,17 +128,10 @@ export class Node<T> {
             // '/hello/*' => match '/hello'
             if (nextNode.#children['*']) {
               handlerSets.push(
-                ...this.#getHandlerSets(
-                  nextNode.#children['*'],
-                  method,
-                  node.#params,
-                  Object.create(null)
-                )
+                ...this.#getHandlerSets(nextNode.#children['*'], method, node.#params, emptyParams)
               )
             }
-            handlerSets.push(
-              ...this.#getHandlerSets(nextNode, method, node.#params, Object.create(null))
-            )
+            handlerSets.push(...this.#getHandlerSets(nextNode, method, node.#params, emptyParams))
           } else {
             tempNodes.push(nextNode)
           }
@@ -155,9 +147,7 @@ export class Node<T> {
           if (pattern === '*') {
             const astNode = node.#children['*']
             if (astNode) {
-              handlerSets.push(
-                ...this.#getHandlerSets(astNode, method, node.#params, Object.create(null))
-              )
+              handlerSets.push(...this.#getHandlerSets(astNode, method, node.#params, emptyParams))
               tempNodes.push(astNode)
             }
             continue
@@ -201,7 +191,7 @@ export class Node<T> {
 
     if (handlerSets.length > 1) {
       handlerSets.sort((a, b) => {
-        return a.score - b.score
+        return a.order - b.order
       })
     }
 
