@@ -87,7 +87,7 @@ export class Node<T> {
     for (let i = 0, len = node.#methods.length; i < len; i++) {
       const m = node.#methods[i]
       const handlerSet = (m[method] || m[METHOD_NAME_ALL]) as HandlerParamsSet<T>
-      if (handlerSet !== undefined) {
+      if (handlerSet) {
         const processedSet: Record<number, boolean> = {}
 
         handlerSet.params = Object.create(null)
@@ -107,7 +107,6 @@ export class Node<T> {
 
   search(method: string, path: string): [[T, Params][]] {
     const handlerSets: HandlerParamsSet<T>[] = []
-    this.#params = Object.create(null)
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let curNodes: Node<T>[] = [this]
@@ -117,6 +116,8 @@ export class Node<T> {
       const part: string = parts[i]
       const isLast = i === len - 1
       const tempNodes: Node<T>[] = []
+
+      console.log(curNodes)
 
       for (let j = 0, len2 = curNodes.length; j < len2; j++) {
         const node = curNodes[j]
@@ -163,13 +164,16 @@ export class Node<T> {
 
           // `/js/:filename{[a-z]+.js}` => match /js/chunk/123.js
           const restPathString = parts.slice(i).join('/')
-          if (matcher instanceof RegExp && matcher.test(restPathString)) {
+
+          const isRegExp = matcher instanceof RegExp
+
+          if (isRegExp && matcher.test(restPathString)) {
             params[name] = restPathString
             handlerSets.push(...this.#getHandlerSets(child, method, node.#params, params))
             continue
           }
 
-          if (matcher === true || matcher.test(part)) {
+          if (!isRegExp || matcher.test(part)) {
             params[name] = part
             if (isLast) {
               handlerSets.push(...this.#getHandlerSets(child, method, params, node.#params))
@@ -194,6 +198,8 @@ export class Node<T> {
         return a.order - b.order
       })
     }
+
+    this.#params = Object.create(null)
 
     return [handlerSets.map(({ handler, params }) => [handler, params] as [T, Params])]
   }
