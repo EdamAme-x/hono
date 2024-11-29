@@ -15,16 +15,27 @@ type HandlerParamsSet<T> = HandlerSet<T> & {
 
 const emptyParams: Record<string, string> = Object.create(null)
 
+const staticRoutes = new Map()
+
+const isStaticPath = (path: string) => {
+  for (const part of splitRoutingPath(path)) {
+    if (getPattern(part)) {
+      return false
+    }
+  }
+  return true
+}
+
 export class Node<T> {
   #methods: Record<string, HandlerSet<T>>[] = []
   
-  #children: Record<string, Node<T>>
+  #children: Record<string, Node<T>> = Object.create(null)
   #patterns: Pattern[] = []
   #order: number = 0
   #params: Record<string, string> = Object.create(null)
+  #staticRoutes: Map<string, Record<string, HandlerParamsSet<T>>[]> = staticRoutes
 
-  constructor(method?: string, handler?: T, children?: Record<string, Node<T>>) {
-    this.#children = children || Object.create(null)
+  constructor(method?: string, handler?: T) {
     if (method && handler) {
       const m: Record<string, HandlerSet<T>> = Object.create(null)
       m[method] = { handler, possibleKeys: [], order: 0 }
@@ -35,6 +46,17 @@ export class Node<T> {
   insert(method: string, path: string, handler: T): Node<T> {
     this.#order++
 
+    if (isStaticPath(path)) {
+      const m: Record<string, HandlerParamsSet<T>> = Object.create(null)
+      m[method] = { handler, possibleKeys: [], order: this.#order, params: emptyParams }
+      if (!this.#staticRoutes.has(path)) {
+        this.#staticRoutes.set(path, [m])
+      }else {
+        this.#staticRoutes.get(path)!.push(m)
+      }
+      return this
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let curNode: Node<T> = this
     const parts = splitRoutingPath(path)
@@ -44,7 +66,7 @@ export class Node<T> {
     for (let i = 0, len = parts.length; i < len; i++) {
       const p: string = parts[i]
 
-      if (Object.keys(curNode.#children).includes(p)) {
+      if (curNode.#children[p]) {
         curNode = curNode.#children[p]
         const pattern = getPattern(p)
         if (pattern) {
@@ -109,13 +131,25 @@ export class Node<T> {
   search(method: string, path: string): [[T, Params][]] {
     const handlerSets: HandlerParamsSet<T>[] = []
 
+    if (this.#staticRoutes.has(path)) {
+      const methods = this.#staticRoutes.get(path)!
+
+      for (let i = 0, len = methods.length; i < len; i++) {
+        const m = methods[i]
+        const handlerSet = (m[method] || m[METHOD_NAME_ALL]) as HandlerParamsSet<T>
+        if (handlerSet) {
+          handlerSets.push(handlerSet)
+        }
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let curNodes: Node<T>[] = [this]
     const parts = splitPath(path)
 
     for (let i = 0, len = parts.length; i < len; i++) {
       const part: string = parts[i]
-      const isLast = i === len - 1
+      const isLwildcard = i === len - 1
       const tempNodes: Node<T>[] = []
 
       for (let j = 0, len2 = curNodes.length; j < len2; j++) {
@@ -124,7 +158,7 @@ export class Node<T> {
 
         if (nextNode) {
           nextNode.#params = node.#params
-          if (isLast) {
+          if (isLwildcard) {
             // '/hello/*' => match '/hello'
             if (nextNode.#children['*']) {
               handlerSets.push(
@@ -145,10 +179,10 @@ export class Node<T> {
           // Wildcard
           // '/hello/*/foo' => match /hello/bar/foo
           if (pattern === '*') {
-            const astNode = node.#children['*']
-            if (astNode) {
-              handlerSets.push(...this.#getHandlerSets(astNode, method, node.#params, emptyParams))
-              tempNodes.push(astNode)
+            const wildcardNode = node.#children['*']
+            if (wildcardNode) {
+              handlerSets.push(...this.#getHandlerSets(wildcardNode, method, node.#params, emptyParams))
+              tempNodes.push(wildcardNode)
             }
             continue
           }
@@ -174,7 +208,7 @@ export class Node<T> {
 
           if (!isRegExp || matcher.test(part)) {
             params[name] = part
-            if (isLast) {
+            if (isLwildcard) {
               handlerSets.push(...this.#getHandlerSets(child, method, params, node.#params))
               if (child.#children['*']) {
                 handlerSets.push(
