@@ -1,5 +1,6 @@
 import { RegExpRouter } from '../../../src/router/reg-exp-router/index.ts'
 import { TrieRouter } from '../../../src/router/trie-router/index.ts'
+import { RadixRouter } from '../../../src/router/radix-router/index.ts'
 import { PatternRouter } from '../../../src/router/pattern-router/index.ts'
 import type { Router } from '../../../src/router.ts'
 import type { RouterInterface } from './tool.mts'
@@ -19,4 +20,5 @@ const createHonoRouter = (name: string, router: Router<unknown>): RouterInterfac
 
 export const regExpRouter = createHonoRouter('RegExpRouter', new RegExpRouter())
 export const trieRouter = createHonoRouter('TrieRouter', new TrieRouter())
+export const radixRouter = createHonoRouter('RadixRouter', new RadixRouter())
 export const patternRouter = createHonoRouter('PatternRouter', new PatternRouter())
