@@ -17,7 +17,7 @@ const emptyParams: Record<string, string> = Object.create(null)
 
 export class Node<T> {
   #methods: Record<string, HandlerSet<T>>[] = []
-
+  
   #children: Record<string, Node<T>>
   #patterns: Pattern[] = []
   #order: number = 0
@@ -84,6 +84,7 @@ export class Node<T> {
     params: Record<string, string>
   ): HandlerParamsSet<T>[] {
     const handlerSets: HandlerParamsSet<T>[] = []
+
     for (let i = 0, len = node.#methods.length; i < len; i++) {
       const m = node.#methods[i]
       const handlerSet = (m[method] || m[METHOD_NAME_ALL]) as HandlerParamsSet<T>
@@ -116,8 +117,6 @@ export class Node<T> {
       const part: string = parts[i]
       const isLast = i === len - 1
       const tempNodes: Node<T>[] = []
-
-      console.log(curNodes)
 
       for (let j = 0, len2 = curNodes.length; j < len2; j++) {
         const node = curNodes[j]
