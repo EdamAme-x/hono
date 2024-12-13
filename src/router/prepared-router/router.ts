@@ -5,7 +5,12 @@ import { buildPreparedMatch } from './builder'
 import { pathLexer } from './lexer'
 import type { PathTree } from './lexer'
 
-export type PreparedMatch<T> = (method: string, path: string, createParams: new () => Params, ...handlers: T[]) => [T, Params][]
+export type PreparedMatch<T> = (
+  method: string,
+  path: string,
+  createParams: new () => Params,
+  ...handlers: T[]
+) => [T, Params][]
 export type Routes<T> = [string, [string, PathTree], T, number][]
 
 const emptyParams = Object.create(null)
@@ -65,10 +70,6 @@ export class PreparedRouter<T> implements Router<T> {
 
 const router = new PreparedRouter()
 
-router.add('GET', '/', '/')
-router.add('GET', '/*', '/*')
-router.add('GET', '*', '*')
-router.add('GET', '/x', '/x')
-router.add('GET', '/x/*', '/x/*')
+router.add('GET', '/:id/:id', 'X')
 
-console.log(router.match('GET', '/x'))
+console.log(router.match('GET', '/123/456')[0][0])

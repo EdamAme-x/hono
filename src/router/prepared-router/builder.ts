@@ -64,13 +64,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
 }
 
 interface Condition {
-  mark:
-    | 'separator'
-    | 'separator-empty'
-    | 'static'
-    | 'dynamic-param'
-    | 'dynamic-regex'
-    | 'wildcard'
+  mark: 'separator' | 'separator-empty' | 'static' | 'dynamic-param' | 'dynamic-regex' | 'wildcard'
   condition: {
     left: string
     operator: '===' | '!==' | '>='
@@ -94,7 +88,7 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
 
     let pathIndex = 0
-    const params: Record<string, string> = {}
+    const params: Record<string, string> = Object.create(null)
     let isEncounteredWildcard = false
 
     for (const pathTreePart of pathTree) {
@@ -156,10 +150,12 @@ function buildConditions<T>(routes: Routes<T>): string {
           })
         }
 
-        if (isEncounteredWildcard) {
-          params[pathTreePart.value] = `${variables.pathParts}.slice(-1)`
-        } else {
-          params[pathTreePart.value] = `${variables.pathParts}[${pathIndex}]`
+        if (!params[pathTreePart.value]) {
+          if (isEncounteredWildcard) {
+            params[pathTreePart.value] = `${variables.pathParts}.slice(-1)`
+          } else {
+            params[pathTreePart.value] = `${variables.pathParts}[${pathIndex}]`
+          }
         }
       } else if (pathTreePart.type === 'wildcard') {
         isEncounteredWildcard = true
@@ -215,20 +211,22 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
 
     conditionTree.conditions = optimizedConditions
-    const isParams = Object.entries(params).length
+    const paramEntries = Object.entries(params)
+    const isParams = paramEntries.length
+
     conditionTree.process = `
     ${
-      isParams ? `
+      isParams
+        ? `
         let ${variables.params} = new ${variables.createParams}();
-        ${
-          Object.entries(params).map(([paramKey, paramValue]) => `${variables.params}.${paramKey} = ${paramValue};`).join('')
-        }
-      ` : ''
+        ${paramEntries
+          .map(([paramKey, paramValue]) => `${variables.params}.${paramKey} = ${paramValue};`)
+          .join('')}
+      `
+        : ''
     }
     ${variables.matchResult}.push([${variables.handler(handlerIndex)}, ${
-      isParams
-        ? variables.params
-        : variables.emptyParams
+      isParams ? variables.params : variables.emptyParams
     }, ${handlerIndex}])`
 
     return conditionTree
