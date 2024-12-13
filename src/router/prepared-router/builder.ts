@@ -9,6 +9,8 @@ const variables = {
   params: 'params',
   pathParts: 'pathParts',
   createParams: 'createParams',
+  staticHandlers: 'staticHandlers',
+  staticMethods: 'staticMethods',
   handler: (i: number) => `handler${i}`,
 }
 
@@ -23,7 +25,8 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   }
 
   const source = `
-      const ${variables.matchResult} = [];
+      const ${variables.staticMethods} = ${variables.staticHandlers}[path];
+      const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
       const ${variables.emptyParams} = Object.create(null);
       const ${variables.pathParts} = ${variables.path}.split('/');
 
@@ -56,7 +59,8 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     variables.method,
     variables.path,
     variables.createParams,
-    ...routes.map((_, index) => variables.handler(index)),
+    variables.staticHandlers,
+    ...routes.map((route) => variables.handler(route[3])),
     source
   ) as PreparedMatch<T>
 }
