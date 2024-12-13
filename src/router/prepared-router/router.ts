@@ -6,7 +6,7 @@ import { pathLexer } from './lexer'
 import type { PathTree } from './lexer'
 
 export type PreparedMatch<T> = (method: string, path: string, ...handlers: T[]) => [T, Params][]
-export type Routes<T> = [string, [string, PathTree], T][]
+export type Routes<T> = [string, [string, PathTree], T, number][]
 
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
@@ -33,7 +33,7 @@ export class PreparedRouter<T> implements Router<T> {
       if (!path.startsWith('/')) {
         path = `/${path}`
       }
-      this.#routes.push([method, [path, pathLexer(path)], handler])
+      this.#routes.push([method, [path, pathLexer(path)], handler, this.#routes.length])
     }
   }
 
@@ -43,9 +43,7 @@ export class PreparedRouter<T> implements Router<T> {
     this.#isBuilt = true
 
     this.match = (method: string, path: string) => {
-      return [
-        this.#preparedMatch(method, path, ...this.#handlers),
-      ]
+      return [this.#preparedMatch(method, path, ...this.#handlers)]
     }
 
     return this.match(method, path)
@@ -56,3 +54,10 @@ export class PreparedRouter<T> implements Router<T> {
     this.#preparedMatch = buildPreparedMatch(this.#routes)
   }
 }
+
+const router = new PreparedRouter()
+
+router.add('GET', '/users/:username{[a-z]+}', 'profile')
+router.add('GET', '/users/:username{[a-z]+}/posts', 'posts')
+
+console.log(router.match('GET', '/users/hono/posts'))
