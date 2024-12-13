@@ -119,7 +119,7 @@ function buildConditions<T>(routes: Routes<T>): string {
           mark: 'static',
           condition: {
             left: `${variables.pathParts}${
-              isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
+              isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
             }`,
             operator: '===',
             right: `'${pathTreePart.value}'`,
@@ -131,7 +131,7 @@ function buildConditions<T>(routes: Routes<T>): string {
             mark: 'dynamic-regex',
             condition: {
               left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${
-                isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
+                isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
               }))`,
               operator: '===',
               right: 'true',
@@ -142,7 +142,7 @@ function buildConditions<T>(routes: Routes<T>): string {
             mark: 'dynamic-param',
             condition: {
               left: `!!${variables.pathParts}${
-                isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
+                isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
               }`,
               operator: '===',
               right: 'true',
@@ -152,7 +152,7 @@ function buildConditions<T>(routes: Routes<T>): string {
 
         if (!params[pathTreePart.value]) {
           if (isEncounteredWildcard) {
-            params[pathTreePart.value] = `${variables.pathParts}.slice(-1)`
+            params[pathTreePart.value] = `${variables.pathParts}.at(-1)`
           } else {
             params[pathTreePart.value] = `${variables.pathParts}[${pathIndex}]`
           }

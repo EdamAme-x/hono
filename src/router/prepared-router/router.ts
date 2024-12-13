@@ -70,6 +70,6 @@ export class PreparedRouter<T> implements Router<T> {
 
 const router = new PreparedRouter()
 
-router.add('GET', '/:id/:id', 'X')
+router.add('GET', '/abc/*/def', 'X')
 
-console.log(router.match('GET', '/123/456')[0][0])
+console.log(router.match('GET', '/abc/constructor/def'))
