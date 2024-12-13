@@ -1,17 +1,19 @@
-import { MESSAGE_MATCHER_IS_ALREADY_BUILT, type Params, type Result, type Router } from '../../router'
+import { MESSAGE_MATCHER_IS_ALREADY_BUILT } from '../../router'
+import type { Params, Result, Router } from '../../router'
 import { checkOptionalParameter } from '../../utils/url'
 import { buildPreparedMatch } from './builder'
 import { pathLexer } from './lexer'
 import type { PathTree } from './lexer'
 
-export type PreparedMatch = (method: string, path: string) => [number, Params][]
+export type PreparedMatch<T> = (method: string, path: string, ...handlers: T[]) => [T, Params][]
 export type Routes<T> = [string, [string, PathTree], T][]
 
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
   #isBuilt = false
-  #preparedMatch = new Function('method', 'path', 'return (()=>[])()') as PreparedMatch
+  #preparedMatch = new Function('method', 'path', 'return (()=>[])()') as PreparedMatch<T>
   #routes: Routes<T> = []
+  #handlers: T[] = []
 
   constructor() {
     if (typeof Function === 'undefined') {
@@ -28,7 +30,7 @@ export class PreparedRouter<T> implements Router<T> {
     if (optionalParameter) {
       optionalParameter.forEach((p) => this.add(method, p, handler))
     } else {
-      if (!path.startsWith("/")) {
+      if (!path.startsWith('/')) {
         path = `/${path}`
       }
       this.#routes.push([method, [path, pathLexer(path)], handler])
@@ -42,10 +44,7 @@ export class PreparedRouter<T> implements Router<T> {
 
     this.match = (method: string, path: string) => {
       return [
-        this.#preparedMatch(method, path).map(([handlerIndex, params]) => [
-          this.#routes[handlerIndex][2],
-          params,
-        ]),
+        this.#preparedMatch(method, path, ...this.#handlers),
       ]
     }
 
@@ -53,6 +52,7 @@ export class PreparedRouter<T> implements Router<T> {
   }
 
   #buildPreparedMatch() {
+    this.#handlers = this.#routes.map((route) => route[2])
     this.#preparedMatch = buildPreparedMatch(this.#routes)
   }
 }

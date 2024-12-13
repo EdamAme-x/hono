@@ -1,4 +1,3 @@
-import path from 'path'
 import { METHOD_NAME_ALL } from '../../router'
 import type { PreparedMatch, Routes } from './router'
 
@@ -11,7 +10,7 @@ const variables = {
   pathParts: 'pathParts',
 }
 
-export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
+export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
@@ -47,15 +46,18 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch {
   return new Function(
     'method',
     'path',
+    ...routes.map(
+      (_, index) => `handler${index}`
+    ),
     source
-  ) as PreparedMatch
+  ) as PreparedMatch<T>
 }
 
 interface Condition {
-  mark: "separator" | "separator-empty" | "static" | "dynamic" | "dynamic-param" | "dynamic-regex" | "wildcard",
+  mark: 'separator' | 'separator-empty' | 'static' | 'dynamic' | 'dynamic-param' | 'dynamic-regex' | 'wildcard',
   condition: {
     left: string
-    operator: "===" | "!==" | ">="
+    operator: '===' | '!==' | '>='
     right?: string
   }
 }
@@ -76,7 +78,7 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
 
     let pathIndex = 0
-    let params: Record<string, string> = {}
+    const params: Record<string, string> = {}
     let isEncounteredWildcard = false
 
     for (const pathTreePart of pathTree) {
@@ -85,10 +87,10 @@ function buildConditions<T>(routes: Routes<T>): string {
 
         conditionTree.conditions.push(
           {
-            mark: "separator",
+            mark: 'separator',
             condition: {
               left: `${variables.pathParts}.length`,
-              operator: "===",
+              operator: '===',
               right: `${pathIndex + 1}`
             }
           }
@@ -97,11 +99,11 @@ function buildConditions<T>(routes: Routes<T>): string {
         if (pathTree[pathIndex] === undefined) {
           conditionTree.conditions.push(
             {
-              mark: "separator-empty",
+              mark: 'separator-empty',
               condition: {
                 left: `${variables.pathParts}[${pathIndex}]`,
-                operator: "===",
-                right: `''`
+                operator: '===',
+                right: '""'
               }
             }
           )
@@ -109,11 +111,11 @@ function buildConditions<T>(routes: Routes<T>): string {
       } else if (pathTreePart.type === 'static') {
         conditionTree.conditions.push(
           {
-            mark: "static",
+            mark: 'static',
             condition: {
-              left: `${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+              left: `${variables.pathParts}${isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
                 }`,
-              operator: "===",
+              operator: '===',
               right: `'${pathTreePart.value}'`
             }
           }
@@ -121,34 +123,34 @@ function buildConditions<T>(routes: Routes<T>): string {
       } else if (pathTreePart.type === 'dynamic') {
         conditionTree.conditions.push(
           {
-            mark: "dynamic",
+            mark: 'dynamic',
             condition: {
               left: `${variables.pathParts}.length`,
-              operator: "===",
+              operator: '===',
               right: `${pathIndex + 1}`
             }
           }
         )
         conditionTree.conditions.push(
           {
-            mark: "dynamic-param",
+            mark: 'dynamic-param',
             condition: {
-              left: `${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+              left: `${variables.pathParts}${isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
                 }`,
-              operator: "!==",
-              right: `undefined`
+              operator: '!==',
+              right: 'undefined'
             }
           }
         )
         if (pathTreePart.regex) {
           conditionTree.conditions.push(
             {
-              mark: "dynamic-regex",
+              mark: 'dynamic-regex',
               condition: {
-                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${isEncounteredWildcard ? ".slice(-1)" : `[${pathIndex}]`
+                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${isEncounteredWildcard ? '.slice(-1)' : `[${pathIndex}]`
                   }))`,
-                operator: "===",
-                right: `true`
+                operator: '===',
+                right: 'true'
               }
             }
           )
@@ -162,10 +164,10 @@ function buildConditions<T>(routes: Routes<T>): string {
         isEncounteredWildcard = true
         conditionTree.conditions.push(
           {
-            mark: "wildcard",
+            mark: 'wildcard',
             condition: {
               left: `${variables.pathParts}.length`,
-              operator: ">=",
+              operator: '>=',
               right: `${pathIndex}`
             }
           }
@@ -182,33 +184,33 @@ function buildConditions<T>(routes: Routes<T>): string {
       if (isAlreadyMarked.includes(conditionTree.conditions[i].mark)) {
         continue
       } else {
-        if (["separator", "wildcard"].includes(conditionTree.conditions[i].mark)) {
+        if (['separator', 'wildcard'].includes(conditionTree.conditions[i].mark)) {
           isAlreadyMarked.push(conditionTree.conditions[i].mark)
         }
         uniqueConditions.push(conditionTree.conditions[i])
       }
     }
 
-    // note: remove if wildcard or dynamic, remove separator abd dynamic
+    // note: remove if wildcard or dynamic, remove separator and dynamic
 
     let isHasWildcardOrDynamic = false
 
     for (let i = uniqueConditions.length - 1; i >= 0; i--) {
-      if (["wildcard", "dynamic"].includes(uniqueConditions[i].mark)) {
+      if (['wildcard', 'dynamic'].includes(uniqueConditions[i].mark)) {
         isHasWildcardOrDynamic = true
       }
     }
 
-    const optimizedConditions: ConditionTree["conditions"] = []
+    const optimizedConditions: ConditionTree['conditions'] = []
     for (let i = uniqueConditions.length - 1; i >= 0; i--) {
-      if (!isHasWildcardOrDynamic || !["separator", "dynamic"].includes(uniqueConditions[i].mark)) {
+      if (!isHasWildcardOrDynamic || !['separator', 'dynamic'].includes(uniqueConditions[i].mark)) {
         optimizedConditions.push(uniqueConditions[i])
       }
     }
 
     conditionTree.conditions = optimizedConditions
-    conditionTree.process = `${variables.matchResult}.push([${handlerIndex
-      }, ${Object.entries(params).length ? "{" + Object.entries(params).map(([key, value]) => `${key}: ${value}`).join(',') + "}" : variables.emptyParams}])`
+    conditionTree.process = `${variables.matchResult}.push([handler${handlerIndex
+      }, ${Object.entries(params).length ? '{' + Object.entries(params).map(([key, value]) => `${key}: ${value}`).join(',') + '}' : variables.emptyParams}])`
 
     return conditionTree
   }
