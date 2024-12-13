@@ -52,8 +52,6 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
 
       return ${variables.matchResult}.map(([handler, params]) => [handler, params]);`
 
-  console.log(source)
-
   return new Function(
     variables.method,
     variables.path,
@@ -64,7 +62,14 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
 }
 
 interface Condition {
-  mark: 'separator' | 'separator-empty' | 'static' | 'dynamic-param' | 'dynamic-regex' | 'wildcard'
+  mark:
+    | 'separator'
+    | 'separator-empty'
+    | 'static'
+    | 'dynamic-param'
+    | 'dynamic-wildcard'
+    | 'dynamic-regex'
+    | 'wildcard'
   condition: {
     left: string
     operator: '===' | '!==' | '>='
@@ -118,25 +123,35 @@ function buildConditions<T>(routes: Routes<T>): string {
         conditionTree.conditions.push({
           mark: 'static',
           condition: {
-            left: `${variables.pathParts}${
-              isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
-            }`,
+            left: `${variables.pathParts}${isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`}`,
             operator: '===',
             right: `'${pathTreePart.value}'`,
           },
         })
       } else if (pathTreePart.type === 'dynamic') {
         if (pathTreePart.regex) {
-          conditionTree.conditions.push({
-            mark: 'dynamic-regex',
-            condition: {
-              left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${
-                isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
-              }))`,
-              operator: '===',
-              right: 'true',
-            },
-          })
+          if (pathTreePart.regex.split('/').length > 1) {
+            conditionTree.conditions.push({
+              mark: 'dynamic-wildcard',
+              condition: {
+                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}.slice(${pathIndex}).join("/")))`,
+                operator: '===',
+                right: 'true',
+              },
+            })
+            params[pathTreePart.value] = `${variables.pathParts}.slice(${pathIndex}).join("/")`
+          } else {
+            conditionTree.conditions.push({
+              mark: 'dynamic-regex',
+              condition: {
+                left: `(/${pathTreePart.regex}/.test(${variables.pathParts}${
+                  isEncounteredWildcard ? '.at(-1)' : `[${pathIndex}]`
+                }))`,
+                operator: '===',
+                right: 'true',
+              },
+            })
+          }
         } else {
           conditionTree.conditions.push({
             mark: 'dynamic-param',
@@ -198,7 +213,7 @@ function buildConditions<T>(routes: Routes<T>): string {
     let isHasWildcard = false
 
     for (let i = uniqueConditions.length - 1; i >= 0; i--) {
-      if (['wildcard'].includes(uniqueConditions[i].mark)) {
+      if (['wildcard', 'dynamic-wildcard'].includes(uniqueConditions[i].mark)) {
         isHasWildcard = true
       }
     }

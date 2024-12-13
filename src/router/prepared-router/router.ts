@@ -67,9 +67,3 @@ export class PreparedRouter<T> implements Router<T> {
     this.#preparedMatch = buildPreparedMatch(this.#routes)
   }
 }
-
-const router = new PreparedRouter()
-
-router.add('GET', '/abc/*/def', 'X')
-
-console.log(router.match('GET', '/abc/constructor/def'))
