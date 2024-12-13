@@ -5,8 +5,16 @@ import { buildPreparedMatch } from './builder'
 import { pathLexer } from './lexer'
 import type { PathTree } from './lexer'
 
-export type PreparedMatch<T> = (method: string, path: string, ...handlers: T[]) => [T, Params][]
+export type PreparedMatch<T> = (method: string, path: string, createParams: new () => Params, ...handlers: T[]) => [T, Params][]
 export type Routes<T> = [string, [string, PathTree], T, number][]
+
+const emptyParams = Object.create(null)
+const createParams = (() => {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const E = function () {}
+  E.prototype = emptyParams
+  return E
+})() as unknown as { new (): Params }
 
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
@@ -43,7 +51,7 @@ export class PreparedRouter<T> implements Router<T> {
     this.#isBuilt = true
 
     this.match = (method: string, path: string) => {
-      return [this.#preparedMatch(method, path, ...this.#handlers)]
+      return [this.#preparedMatch(method, path, createParams, ...this.#handlers)]
     }
 
     return this.match(method, path)

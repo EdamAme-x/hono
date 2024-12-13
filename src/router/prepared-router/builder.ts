@@ -8,6 +8,8 @@ const variables = {
   emptyParams: 'emptyParams',
   params: 'params',
   pathParts: 'pathParts',
+  createParams: 'createParams',
+  handler: (i: number) => `handler${i}`,
 }
 
 export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
@@ -53,9 +55,10 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   console.log(source)
 
   return new Function(
-    'method',
-    'path',
-    ...routes.map((_, index) => `handler${index}`),
+    variables.method,
+    variables.path,
+    variables.createParams,
+    ...routes.map((_, index) => variables.handler(index)),
     source
   ) as PreparedMatch<T>
 }
@@ -212,13 +215,19 @@ function buildConditions<T>(routes: Routes<T>): string {
     }
 
     conditionTree.conditions = optimizedConditions
-    conditionTree.process = `${variables.matchResult}.push([handler${handlerIndex}, ${
-      Object.entries(params).length
-        ? '{' +
-          Object.entries(params)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(',') +
-          '}'
+    const isParams = Object.entries(params).length
+    conditionTree.process = `
+    ${
+      isParams ? `
+        let ${variables.params} = new ${variables.createParams}();
+        ${
+          Object.entries(params).map(([paramKey, paramValue]) => `${variables.params}.${paramKey} = ${paramValue};`).join('')
+        }
+      ` : ''
+    }
+    ${variables.matchResult}.push([${variables.handler(handlerIndex)}, ${
+      isParams
+        ? variables.params
         : variables.emptyParams
     }, ${handlerIndex}])`
 
