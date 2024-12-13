@@ -11,6 +11,8 @@ export type PreparedMatch<T> = (
   createParams: new () => Params,
   ...handlers: T[]
 ) => [T, Params][]
+
+export type Route<T> = [string, [string, PathTree], T, number]
 export type Routes<T> = [string, [string, PathTree], T, number][]
 
 const emptyParams = Object.create(null)

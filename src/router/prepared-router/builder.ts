@@ -1,5 +1,5 @@
 import { METHOD_NAME_ALL } from '../../router'
-import type { PreparedMatch, Routes } from './router'
+import type { PreparedMatch, Route, Routes } from './router'
 
 const variables = {
   method: 'method',
@@ -85,7 +85,7 @@ interface ConditionTree {
 function buildConditions<T>(routes: Routes<T>): string {
   const conditionTrees: ConditionTree[] = []
 
-  const buildConditionTree = (route: Routes<T>[number], handlerIndex: number) => {
+  const buildConditionTree = (route: Route<T>, handlerIndex: number) => {
     const pathTree = route[1][1]
 
     const conditionTree: ConditionTree = {
