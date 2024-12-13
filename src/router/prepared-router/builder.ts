@@ -20,17 +20,19 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     methodWithRoutes[route[0]].push(route)
   }
 
-  const source = `return (() => {
+  let handlerIndex = -1
+
+  const source = `
       const ${variables.matchResult} = [];
       const ${variables.emptyParams} = Object.create(null);
       const ${variables.pathParts} = ${variables.path}.split('/');
 
-      ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
+      ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL], ++handlerIndex) : ''}
       ${(() => {
       delete methodWithRoutes[METHOD_NAME_ALL]
       const conditions = []
       for (const [method, routes] of Object.entries(methodWithRoutes)) {
-        conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes)}}`)
+        conditions.push(`${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(routes, ++handlerIndex)}}`)
       }
 
       return conditions.join('\n')
@@ -40,8 +42,9 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
         ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
       }
 
-      return ${variables.matchResult};
-    })()`
+      return ${variables.matchResult};`
+
+    console.log(source)
 
   return new Function(
     'method',
@@ -67,7 +70,7 @@ interface ConditionTree {
   process?: string
 }
 
-function buildConditions<T>(routes: Routes<T>): string {
+function buildConditions<T>(routes: Routes<T>, handlerIndex: number): string {
   const conditionTrees: ConditionTree[] = []
 
   const buildConditionTree = (route: Routes<T>[number], handlerIndex: number) => {
@@ -215,8 +218,9 @@ function buildConditions<T>(routes: Routes<T>): string {
     return conditionTree
   }
 
-  for (let i = 0, len = routes.length; i < len; i++) {
-    conditionTrees.push(buildConditionTree(routes[i], i))
+  for (const route of routes) {
+    console.log(handlerIndex, route)
+    conditionTrees.push(buildConditionTree(route, handlerIndex))
   }
 
   /*

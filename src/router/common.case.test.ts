@@ -775,6 +775,7 @@ export const runTest = ({
 
       it('UNKNOWN_METHOD /all', () => {
         const res = match('UNKNOWN_METHOD', '/all')
+
         expect(res.length).toBe(1)
         expect(res[0].handler).toBe('all')
       })
