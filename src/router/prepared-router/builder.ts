@@ -45,10 +45,10 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
       })()}
       
       if (${variables.matchResult}.length > 1) {
-        ${variables.matchResult}.sort((a, b) => a[0] - b[0]);   
+        ${variables.matchResult}.sort((a, b) => a[2] - b[2]);   
       }
 
-      return ${variables.matchResult};`
+      return ${variables.matchResult}.map(([handler, params]) => [handler, params]);`
 
   console.log(source)
 
@@ -195,8 +195,6 @@ function buildConditions<T>(routes: Routes<T>): string {
       }
     }
 
-    console.log(uniqueConditions)
-
     // note: remove if wildcard or dynamic, remove separator and dynamic
     let isHasWildcard = false
 
@@ -222,7 +220,7 @@ function buildConditions<T>(routes: Routes<T>): string {
             .join(',') +
           '}'
         : variables.emptyParams
-    }])`
+    }, ${handlerIndex}])`
 
     return conditionTree
   }

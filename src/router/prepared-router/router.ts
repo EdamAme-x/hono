@@ -57,7 +57,10 @@ export class PreparedRouter<T> implements Router<T> {
 
 const router = new PreparedRouter()
 
-router.add('GET', '/users/:username{[a-z]+}', 'profile')
-router.add('GET', '/users/:username{[a-z]+}/posts', 'posts')
+router.add('GET', '/', '/')
+router.add('GET', '/*', '/*')
+router.add('GET', '*', '*')
+router.add('GET', '/x', '/x')
+router.add('GET', '/x/*', '/x/*')
 
-console.log(router.match('GET', '/users/hono/posts'))
+console.log(router.match('GET', '/x'))
