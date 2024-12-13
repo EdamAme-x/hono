@@ -13,7 +13,23 @@ export type PreparedMatch<T> = (
   ...handlers: T[]
 ) => [T, Params][]
 
-export type Route<T> = [string, [string, PathTree], T, number, number, boolean]
+// export type Route<T> = [string, [string, PathTree], T, number, number, boolean]
+export type Route<T> = {
+  method: string
+  path: [string, PathTree]
+  handler: T
+  order: number
+  tag: number
+  isStatic: boolean
+}
+/**
+ * 0 => method
+ * 1 => [path, pathTree]
+ * 2 => handler
+ * 3 => order
+ * 4 => tag
+ * 5 => isStatic
+ */
 export type Routes<T> = Route<T>[]
 
 const emptyParams = Object.create(null)
@@ -24,7 +40,7 @@ const createParams = (() => {
   return E
 })() as unknown as { new (): Params }
 
-const isStaticPath = (path: string) => splitRoutingPath(path).every(p => getPattern(p) === null)
+const isStaticPath = (path: string) => splitRoutingPath(path).every((p) => getPattern(p) === null)
 
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
@@ -59,7 +75,14 @@ export class PreparedRouter<T> implements Router<T> {
         isStatic = true
       }
 
-      this.#routes.push([method, [path, pathLexer(path)], handler, this.#routes.length, NaN, isStatic])
+      this.#routes.push({
+        method,
+        path: [path, pathLexer(path)],
+        handler,
+        order: this.#routes.length,
+        tag: NaN,
+        isStatic,
+      })
     }
   }
 
@@ -69,27 +92,39 @@ export class PreparedRouter<T> implements Router<T> {
     this.#isBuilt = true
 
     this.match = (method: string, path: string) => {
-      return [this.#preparedMatch(method, path, createParams, this.#staticHandlers, ...this.#handlers)]
+      return [
+        this.#preparedMatch(method, path, createParams, this.#staticHandlers, ...this.#handlers),
+      ]
     }
 
     return this.match(method, path)
   }
 
   #buildPreparedMatch() {
-    for (let i = 0; i < this.#routes.length; i++) {
-      const route = this.#routes[i]
-      if (route[4]) {
-        this.#staticHandlers[route[1][0]] ||= Object.create(null)
-        this.#staticHandlers[route[1][0]][route[0]] ||= []
+    const dynamicRoutes: Routes<T> = []
 
-        this.#staticHandlers[route[1][0]][route[0]].push([route[2], emptyParams, route[3]])
-        this.#routes.splice(i, 1)
+    for (let tagIndex = 0, routes = [...this.#routes]; ; ) {
+      const route = routes.shift()
+      if (!route) {
+        break
+      }
+      if (route.isStatic) {
+        this.#staticHandlers[route.path[0]] ||= Object.create(null)
+        this.#staticHandlers[route.path[0]][route.method] ||= []
+
+        this.#staticHandlers[route.path[0]][route.method].push([
+          route.handler,
+          emptyParams,
+          route.order,
+        ])
+      } else {
+        tagIndex++
+        route.tag = tagIndex
+        this.#handlers.push(route.handler)
+        dynamicRoutes.push(route)
       }
     }
-    this.#handlers = this.#routes.map((route, index) => {
-      route[3] = index
-      return route[2]
-    })
-    this.#preparedMatch = buildPreparedMatch(this.#routes)
+
+    this.#preparedMatch = buildPreparedMatch(dynamicRoutes)
   }
 }

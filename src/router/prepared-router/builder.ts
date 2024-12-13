@@ -18,21 +18,22 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
-    if (!methodWithRoutes[route[0]]) {
-      methodWithRoutes[route[0]] = []
+    if (!methodWithRoutes[route.method]) {
+      methodWithRoutes[route.method] = []
     }
-    methodWithRoutes[route[0]].push(route)
+    methodWithRoutes[route.method].push(route)
   }
 
   const source = `
+      if (path[0] !== '/') {
+        path = '/' + path;
+      }
       const ${variables.staticMethods} = ${variables.staticHandlers}[path];
-      const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
+      const ${variables.matchResult} = ${variables.staticMethods} ? (${
+    variables.staticMethods
+  }[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
       const ${variables.emptyParams} = Object.create(null);
       const ${variables.pathParts} = ${variables.path}.split('/');
-
-      if (${variables.pathParts}[0] !== "") {
-        ${variables.pathParts}.unshift("");
-      }
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
       ${(() => {
@@ -60,7 +61,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     variables.path,
     variables.createParams,
     variables.staticHandlers,
-    ...routes.map((route) => variables.handler(route[3])),
+    ...routes.map((route) => variables.handler(route.tag)),
     source
   ) as PreparedMatch<T>
 }
@@ -89,8 +90,8 @@ interface ConditionTree {
 function buildConditions<T>(routes: Routes<T>): string {
   const conditionTrees: ConditionTree[] = []
 
-  const buildConditionTree = (route: Route<T>, handlerIndex: number) => {
-    const pathTree = route[1][1]
+  const buildConditionTree = (route: Route<T>, handlerIndex: number, tagIndex: number) => {
+    const pathTree = route.path[1]
 
     const conditionTree: ConditionTree = {
       conditions: [],
@@ -244,7 +245,7 @@ function buildConditions<T>(routes: Routes<T>): string {
       `
         : ''
     }
-    ${variables.matchResult}.push([${variables.handler(handlerIndex)}, ${
+    ${variables.matchResult}.push([${variables.handler(tagIndex)}, ${
       isParams ? variables.params : variables.emptyParams
     }, ${handlerIndex}])`
 
@@ -252,7 +253,7 @@ function buildConditions<T>(routes: Routes<T>): string {
   }
 
   for (const route of routes) {
-    conditionTrees.push(buildConditionTree(route, route[3]))
+    conditionTrees.push(buildConditionTree(route, route.order, route.tag))
   }
 
   /*
