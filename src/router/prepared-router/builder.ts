@@ -22,6 +22,8 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     methodWithRoutes[route.method].push(route)
   }
 
+  // NOTE: CACHE STATIC PATH REQUEST WITH DYNAMIC PATH
+
   const source = `
       if (path[0] !== '/') {
         path = '/' + path;
