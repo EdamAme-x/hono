@@ -11,6 +11,9 @@ const variables = {
   createParams: 'createParams',
   staticHandlers: 'staticHandlers',
   staticMethods: 'staticMethods',
+  preparedHandlers: 'preparedHandlers',
+  preparedMethods: 'preparedMethods',
+  preparedResult: 'preparedResult',
   handler: (i: number) => `handler${i}`,
 }
 
@@ -22,24 +25,29 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     methodWithRoutes[route.method].push(route)
   }
 
-  // NOTE: CACHE STATIC PATH REQUEST WITH DYNAMIC PATH
-
   const source = `
       if (path[0] !== '/') {
         path = '/' + path;
       }
+
+      const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
+
+      if (${variables.preparedMethods}) {
+        const ${variables.preparedResult} = ${variables.preparedMethods}[method] || ${
+    variables.preparedMethods
+  }['${METHOD_NAME_ALL}']
+
+        if (${variables.preparedResult}) {
+          return ${variables.preparedResult}
+        }
+      }
+
       const ${variables.staticMethods} = ${variables.staticHandlers}[path];
       const ${variables.matchResult} = ${variables.staticMethods} ? (${
     variables.staticMethods
   }[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
-      ${
-        routes.length > 0
-          ? `
-            const ${variables.emptyParams} = Object.create(null);
-            const ${variables.pathParts} = ${variables.path}.split('/');
-          `
-          : ''
-      }
+      const ${variables.emptyParams} = Object.create(null);
+      const ${variables.pathParts} = ${variables.path}.split('/');
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
       ${(() => {
@@ -67,6 +75,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     variables.path,
     variables.createParams,
     variables.staticHandlers,
+    variables.preparedHandlers,
     ...routes.map((route) => variables.handler(route.tag)),
     source
   ) as PreparedMatch<T>
