@@ -13,7 +13,6 @@ export type PreparedMatch<T> = (
   ...handlers: T[]
 ) => [T, Params][]
 
-// export type Route<T> = [string, [string, PathTree], T, number, number, boolean]
 export type Route<T> = {
   method: string
   path: [string, PathTree]
@@ -22,14 +21,6 @@ export type Route<T> = {
   tag: number
   isStatic: boolean
 }
-/**
- * 0 => method
- * 1 => [path, pathTree]
- * 2 => handler
- * 3 => order
- * 4 => tag
- * 5 => isStatic
- */
 export type Routes<T> = Route<T>[]
 
 const emptyParams = Object.create(null)
@@ -42,6 +33,9 @@ const createParams = (() => {
 
 const isStaticPath = (path: string) => splitRoutingPath(path).every((p) => getPattern(p) === null)
 
+/**
+ * @expertimental
+ */
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
   #isBuilt = false
