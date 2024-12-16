@@ -145,6 +145,8 @@ export class PreparedRouter<T> implements Router<T> {
 
         this.#preparedHandlers[path] ||= Object.create(null)
         this.#preparedHandlers[path][method] = matchResult
+
+        delete this.#staticHandlers[path][method]
       }
     }
   }
