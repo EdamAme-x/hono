@@ -39,8 +39,7 @@ const isStaticPath = (path: string) => splitRoutingPath(path).every((p) => getPa
  */
 export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
-  #isBuilt = false
-  #preparedMatch = new Function('method', 'path', 'return (()=>[])()') as PreparedMatch<T>
+  #preparedMatch?: PreparedMatch<T>
   #routes: Routes<T> = []
   #handlers: T[] = []
   #staticHandlers: Record<string, Record<string, [T, Params, number][]>> = Object.create(null)
@@ -53,7 +52,7 @@ export class PreparedRouter<T> implements Router<T> {
   }
 
   add(method: string, path: string, handler: T) {
-    if (this.#isBuilt) {
+    if (this.#preparedMatch) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT)
     }
 
@@ -85,11 +84,9 @@ export class PreparedRouter<T> implements Router<T> {
   match(method: string, path: string): Result<T> {
     this.#buildPreparedMatch()
 
-    this.#isBuilt = true
-
     this.match = (method: string, path: string) => {
       return [
-        this.#preparedMatch(
+        (this.#preparedMatch as PreparedMatch<T>)(
           method,
           path,
           createParams,
