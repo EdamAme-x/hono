@@ -18,9 +18,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
-    if (!methodWithRoutes[route.method]) {
-      methodWithRoutes[route.method] = []
-    }
+    methodWithRoutes[route.method] ||= []
     methodWithRoutes[route.method].push(route)
   }
 
