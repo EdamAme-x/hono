@@ -32,8 +32,14 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
       const ${variables.matchResult} = ${variables.staticMethods} ? (${
     variables.staticMethods
   }[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
-      const ${variables.emptyParams} = Object.create(null);
-      const ${variables.pathParts} = ${variables.path}.split('/');
+      ${
+        routes.length > 0
+          ? `
+            const ${variables.emptyParams} = Object.create(null);
+            const ${variables.pathParts} = ${variables.path}.split('/');
+          `
+          : ''
+      }
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
       ${(() => {
@@ -238,7 +244,7 @@ function buildConditions<T>(routes: Routes<T>): string {
     ${
       isParams
         ? `
-        let ${variables.params} = new ${variables.createParams}();
+        const ${variables.params} = new ${variables.createParams}();
         ${paramEntries
           .map(([paramKey, paramValue]) => `${variables.params}.${paramKey} = ${paramValue};`)
           .join('')}
