@@ -6,7 +6,7 @@ const name = 'rou3'
 const router = createRouter()
 
 for (const route of routes) {
-  addRoute(router, route.path, route.method, handler)
+  addRoute(router, route.path.replace(/\*/g, "**"), route.method, handler)
 }
 
 export const rou3Router: RouterInterface = {

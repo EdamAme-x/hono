@@ -6,7 +6,7 @@ const name = 'radix3'
 const router = createRouter()
 
 for (const route of routes) {
-  router.insert(route.path, handler)
+  router.insert(route.path.replace(/\*/g, "**"), handler)
 }
 
 export const radix3Router: RouterInterface = {
