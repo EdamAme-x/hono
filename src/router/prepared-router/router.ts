@@ -147,4 +147,79 @@ export class PreparedRouter<T> implements Router<T> {
     }
     this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers)
   }
+
+  build(): string {
+    if (!this.#preparedMatch) {
+      this.#buildPreparedMatch()
+    }
+
+    return `new (function () {
+        const preparedMatch = ${this.#preparedMatch!.toString()};
+        const emptyParams = Object.create(null)
+        const createParams = (() => {
+          const E = function () {}
+          E.prototype = emptyParams
+          return E
+        })();
+        const staticHandlers = {};
+        const preparedHandlers = {};
+        const handlers = [];
+
+        const staticMap = ${JSON.stringify(
+          Object.entries(this.#staticHandlers).reduce((prev, cur) => {
+            for (const method in cur[1]) {
+              prev[cur[0]] ||= []
+              prev[cur[0]].push(method)
+            }
+            return prev
+          }, {} as Record<string, string[]>)
+        )};
+        const preparedMap = ${JSON.stringify(
+          Object.entries(this.#preparedHandlers).reduce((prev, cur) => {
+            for (const method in cur[1]) {
+              prev[cur[0]] ||= []
+              prev[cur[0]].push(method)
+            }
+            return prev
+          }, {} as Record<string, string[]>)
+        )};
+
+        return {
+          name: '${this.name}',
+          add: function (method, path, handler) {
+            if (staticMap[path]) {
+              if (staticMap[path].includes(method)) {
+                staticHandlers[path] ||= Object.create(null)
+                staticHandlers[path][method] ||= []
+                staticHandlers[path][method].push([handler, emptyParams])
+              }
+            }else if (preparedMap[path]) {
+              if (preparedMap[path].includes(method)) {
+                preparedHandlers[path] ||= Object.create(null)
+                preparedHandlers[path][method] ||= []
+                preparedHandlers[path][method].push([handler, emptyParams])
+              }
+            }else {
+              handlers.push(handler)
+            }
+          },
+          match: function (method, path) {
+            return preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers)
+          }
+        }
+      })()`
+  }
 }
+
+const router = new PreparedRouter<string>()
+router.add('GET', '/foo', 'foo')
+router.add('GET', '/bar/:id', 'bar + :id')
+router.add('ALL', '/baz/baz', 'baz + baz')
+
+const router2 = (new Function("return " + router.build())() as PreparedRouter<string>)
+console.log(router2)
+router2.add('GET', '/foo', 'foo')
+router2.add('GET', '/bar/:id', 'bar + :id')
+router2.add('ALL', '/baz/baz', 'baz + baz')
+
+console.dir(router2.match('GET', '/baz/baz'), { depth: null })
