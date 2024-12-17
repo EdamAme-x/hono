@@ -92,6 +92,10 @@ export class PreparedRouter<T> implements Router<T> {
   }
 
   #buildPreparedMatch() {
+    if (this.#preparedMatch) {
+      return
+    }
+
     const middleware: Routes<T> = []
 
     for (let tagIndex = 0, routes = [...this.#routes]; ; ) {
