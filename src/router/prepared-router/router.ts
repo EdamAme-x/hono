@@ -12,7 +12,7 @@ export type PreparedMatch<T> = (
   staticHandlers: Record<string, Record<string, [T, Params, number][]>>,
   preparedHandlers: Record<string, Record<string, [T, Params][]>>,
   handlers: T[]
-) => [T, Params][]
+) => [[T, Params][]]
 
 export type Route<T> = {
   method: string
@@ -84,18 +84,14 @@ export class PreparedRouter<T> implements Router<T> {
     const preparedHandlers = this.#preparedHandlers
     const handlers = this.#handlers
 
-    this.match = (method: string, path: string) => {
-      return [
-        (this.#preparedMatch as PreparedMatch<T>)(
+    this.match = (method: string, path: string) => (this.#preparedMatch as PreparedMatch<T>)(
           method,
           path,
           createParams,
           staticHandlers,
           preparedHandlers,
           handlers
-        ),
-      ]
-    }
+        )
 
     return this.match(method, path)
   }
@@ -144,7 +140,7 @@ export class PreparedRouter<T> implements Router<T> {
         )
 
         this.#preparedHandlers[path] ||= Object.create(null)
-        this.#preparedHandlers[path][method] = matchResult
+        this.#preparedHandlers[path][method] = matchResult[0]
 
         delete this.#staticHandlers[path][method]
       }

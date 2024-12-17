@@ -34,7 +34,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   }['${METHOD_NAME_ALL}']
 
         if (${variables.preparedResult}) {
-          return ${variables.preparedResult}
+          return [${variables.preparedResult}]
         }
       }
 
@@ -64,7 +64,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
         ${variables.matchResult}.sort((a, b) => a[2] - b[2]);   
       }
 
-      return ${variables.matchResult}.map(([handler, params]) => [handler, params]);`
+      return [${variables.matchResult}.map(([handler, params]) => [handler, params])];`
 
   return new Function(
     variables.method,
