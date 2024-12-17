@@ -318,7 +318,16 @@ function buildConditions<T>(routes: Routes<T>): string {
     )
   }
 
-  const buildSource = (conditionTrees: ConditionTree[]): string => {
+  const isExclusiveCondition  = (a: Condition, b: Condition) => {
+    return (
+      a.condition.left === b.condition.left &&
+            a.condition.operator === '===' &&
+            b.condition.operator === '===' &&
+            a.condition.right !== b.condition.right
+    )
+  }
+
+  const buildSource = (conditionTrees: ConditionTree[], prevCondition?: Condition): string => {
     const getSortedConditions = (): Condition[] => {
       const conditions: Condition[] = []
 
@@ -366,7 +375,7 @@ function buildConditions<T>(routes: Routes<T>): string {
     )
 
     if (!includeConditionTrees.length) {
-      return buildSource(excludeConditionTrees)
+      return buildSource(excludeConditionTrees, prevCondition)
     }
 
     const noLengthConditionTrees = includeConditionTrees.filter(
@@ -374,17 +383,24 @@ function buildConditions<T>(routes: Routes<T>): string {
     )
 
     return `
-      if (${mostCommonCondition.condition.left} ${mostCommonCondition.condition.operator} ${
+      ${
+        prevCondition
+          ? isExclusiveCondition(prevCondition, mostCommonCondition)
+            ? 'else '
+            : ''
+          : ''
+      }if (${mostCommonCondition.condition.left} ${mostCommonCondition.condition.operator} ${
       mostCommonCondition.condition.right
     }) {
         ${noLengthConditionTrees.map((conditionTree) => conditionTree.process).join('\n')}
         ${buildSource(
           includeConditionTrees.filter(
             (conditionTree) => !noLengthConditionTrees.includes(conditionTree)
-          )
+          ),
+          mostCommonCondition
         )}
       }
-      ${buildSource(excludeConditionTrees)}
+      ${buildSource(excludeConditionTrees, mostCommonCondition)}
     `
   }
 
