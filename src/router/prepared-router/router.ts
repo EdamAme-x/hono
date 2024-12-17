@@ -80,19 +80,13 @@ export class PreparedRouter<T> implements Router<T> {
   match(method: string, path: string): Result<T> {
     this.#buildPreparedMatch()
 
+    const preparedMatch = this.#preparedMatch!
     const staticHandlers = this.#staticHandlers
     const preparedHandlers = this.#preparedHandlers
     const handlers = this.#handlers
 
     this.match = (method: string, path: string) =>
-      (this.#preparedMatch as PreparedMatch<T>)(
-        method,
-        path,
-        createParams,
-        staticHandlers,
-        preparedHandlers,
-        handlers
-      )
+      preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers)
 
     return this.match(method, path)
   }
