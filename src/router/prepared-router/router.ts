@@ -199,17 +199,3 @@ export class PreparedRouter<T> implements Router<T> {
       })()`
   }
 }
-
-const router = new PreparedRouter<string>()
-router.add('GET', '/foo', 'foo')
-router.add('GET', '/bar/:id', 'bar + :id')
-router.add('ALL', '/baz/baz', 'baz + baz')
-
-console.log(router.build())
-const router2 = new Function('return ' + router.build())() as PreparedRouter<string>
-console.log(router2)
-router2.add('GET', '/foo', 'foo')
-router2.add('GET', '/bar/:id', 'bar + :id')
-router2.add('ALL', '/baz/baz', 'baz + baz')
-
-console.dir(router2.match('GET', '/baz/baz'), { depth: null })
