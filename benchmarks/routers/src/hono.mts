@@ -14,11 +14,15 @@ const createHonoRouter = (name: string, router: Router<unknown>): RouterInterfac
     name: `Hono ${name}`,
     match: (route) => {
       router.match(route.method, route.path)
-    },
+    }
   }
 }
 
 export const regExpRouter = createHonoRouter('RegExpRouter', new RegExpRouter())
-export const preparedRouter = createHonoRouter('PreparedRouter', new PreparedRouter())
+const _preparedRouter = new PreparedRouter()
+export const preparedRouter = [
+  createHonoRouter('PreparedRouter', _preparedRouter),
+  createHonoRouter('PreparedRouter (precompiled)', new Function('return ' + _preparedRouter.build())()),
+]
 export const trieRouter = createHonoRouter('TrieRouter', new TrieRouter())
 export const patternRouter = createHonoRouter('PatternRouter', new PatternRouter())
