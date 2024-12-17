@@ -47,7 +47,7 @@ export class PreparedRouter<T> implements Router<T> {
 
   constructor() {
     if (typeof Function === 'undefined') {
-      throw new Error('This runtime does not support prepared router')
+      throw new Error('This runtime does not support `PreparedRouter`')
     }
   }
 
