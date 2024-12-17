@@ -146,8 +146,6 @@ export class PreparedRouter<T> implements Router<T> {
       }
     }
     this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers)
-
-    console.log(this.#preparedMatch.toString())
   }
 
   build(): string {
