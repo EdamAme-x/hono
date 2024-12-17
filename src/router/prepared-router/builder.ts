@@ -17,7 +17,17 @@ const variables = {
   handler: (i: number) => `handler${i}`,
 }
 
-export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
+let buildConditionsCache: [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Routes<any>[],
+  string[]
+] = [[], []]
+
+export function buildPreparedMatch<T>(
+  routes: Routes<T>,
+  isRebuild: boolean,
+  isNoStaticHandlers: boolean
+): PreparedMatch<T> {
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
@@ -38,10 +48,16 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
         }
       }
 
-      const ${variables.staticMethods} = ${variables.staticHandlers}[path];
-      const ${variables.matchResult} = ${variables.staticMethods} ? (${
-    variables.staticMethods
-  }[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
+      ${
+        isNoStaticHandlers
+          ? `
+        const ${variables.matchResult} = [];
+        `
+          : `
+        const ${variables.staticMethods} = ${variables.staticHandlers}[path];
+        const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
+        `
+      }
       const ${variables.emptyParams} = Object.create(null);
       const ${variables.pathParts} = ${variables.path}.split('/');
 
@@ -65,6 +81,10 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
       }
 
       return [${variables.matchResult}.map(([handler, params]) => [handler, params])];`
+
+  if (isRebuild) {
+    buildConditionsCache = [[], []]
+  }
 
   return new Function(
     variables.method,
@@ -99,6 +119,11 @@ interface ConditionTree {
 }
 
 function buildConditions<T>(routes: Routes<T>): string {
+  const cacheIndex = buildConditionsCache[0].indexOf(routes)
+  if (cacheIndex !== -1) {
+    return buildConditionsCache[1][cacheIndex]
+  }
+
   const conditionTrees: ConditionTree[] = []
 
   const buildConditionTree = (route: Route<T>, handlerIndex: number, tagIndex: number) => {
@@ -363,5 +388,10 @@ function buildConditions<T>(routes: Routes<T>): string {
     `
   }
 
-  return buildSource(conditionTrees)
+  const source = buildSource(conditionTrees)
+
+  buildConditionsCache[0].push(routes)
+  buildConditionsCache[1].push(source)
+
+  return source
 }

@@ -84,6 +84,7 @@ export class PreparedRouter<T> implements Router<T> {
     const staticHandlers = this.#staticHandlers
     const preparedHandlers = this.#preparedHandlers
     const handlers = this.#handlers
+    console.log(preparedMatch.toString())
 
     this.match = (method: string, path: string) =>
       preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers)
@@ -92,7 +93,7 @@ export class PreparedRouter<T> implements Router<T> {
   }
 
   #buildPreparedMatch() {
-    const dynamicRoutes: Routes<T> = []
+    const middleware: Routes<T> = []
 
     for (let tagIndex = 0, routes = [...this.#routes]; ; ) {
       const route = routes.shift()
@@ -100,32 +101,33 @@ export class PreparedRouter<T> implements Router<T> {
         break
       }
       if (route.isStatic) {
-        this.#staticHandlers[route.path[0]] ||= Object.create(null)
-        this.#staticHandlers[route.path[0]][route.method] ||= []
+        const path = route.path[0]
+        const method = route.method
 
-        this.#staticHandlers[route.path[0]][route.method].push([
-          route.handler,
-          emptyParams,
-          route.order,
-        ])
+        this.#staticHandlers[path] ||= Object.create(null)
+        this.#staticHandlers[path][method] ||= []
+
+        this.#staticHandlers[path][method].push([route.handler, emptyParams, route.order])
       } else {
-        tagIndex++
-        route.tag = tagIndex
+        route.tag = ++tagIndex
         this.#handlers.push(route.handler)
-        dynamicRoutes.push(route)
+        middleware.push(route)
       }
     }
 
-    this.#preparedMatch = buildPreparedMatch(dynamicRoutes)
+    const prePreparedMatch = buildPreparedMatch(middleware, false, false)
+
+    let isNoStaticHandlers = true
 
     for (const path in this.#staticHandlers) {
       const staticMethods = this.#staticHandlers[path]
 
       for (const method in staticMethods) {
         if (method === METHOD_NAME_ALL) {
+          isNoStaticHandlers = false
           continue
         }
-        const matchResult = this.#preparedMatch(
+        const matchResult = prePreparedMatch(
           method,
           path,
           createParams,
@@ -140,5 +142,6 @@ export class PreparedRouter<T> implements Router<T> {
         delete this.#staticHandlers[path][method]
       }
     }
+    this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers)
   }
 }
