@@ -72,7 +72,7 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
     variables.createParams,
     variables.staticHandlers,
     variables.preparedHandlers,
-    ...routes.map((route) => variables.handler(route.tag)),
+    `[${routes.map((route) => variables.handler(route.tag)).join(',')}]`,
     source
   ) as PreparedMatch<T>
 }
