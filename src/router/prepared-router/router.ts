@@ -60,10 +60,6 @@ export class PreparedRouter<T> implements Router<T> {
     if (optionalParameter) {
       optionalParameter.forEach((p) => this.add(method, p, handler))
     } else {
-      if (!path.startsWith('/')) {
-        path = `/${path}`
-      }
-
       let isStatic = false
 
       if (isStaticPath(path)) {

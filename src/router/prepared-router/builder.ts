@@ -26,10 +26,6 @@ export function buildPreparedMatch<T>(routes: Routes<T>): PreparedMatch<T> {
   }
 
   const source = `
-      if (path[0] !== '/') {
-        path = '/' + path;
-      }
-
       const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
 
       if (${variables.preparedMethods}) {
