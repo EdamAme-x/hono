@@ -84,7 +84,6 @@ export class PreparedRouter<T> implements Router<T> {
     const staticHandlers = this.#staticHandlers
     const preparedHandlers = this.#preparedHandlers
     const handlers = this.#handlers
-    console.log(preparedMatch.toString())
 
     this.match = (method: string, path: string) =>
       preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers)
