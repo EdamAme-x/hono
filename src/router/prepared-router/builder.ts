@@ -28,6 +28,7 @@ export function buildPreparedMatch<T>(
   isRebuild: boolean,
   isNoStaticHandlers: boolean
 ): PreparedMatch<T> {
+  console.log(routes)
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
@@ -74,9 +75,14 @@ export function buildPreparedMatch<T>(
         return conditions.join('\n')
       })()}
       
-      if (${variables.matchResult}.length > 1) {
-        ${variables.matchResult}.sort((a, b) => a[2] - b[2]);   
-      }
+     ${
+      routes.length > 0 ? 
+        `
+        if (${variables.matchResult}.length > 1) {
+          ${variables.matchResult}.sort((a, b) => a[2] - b[2]);   
+        }
+        ` : ''
+     }
 
       return [${variables.matchResult}.map(([handler, params]) => [handler, params])];`
 
