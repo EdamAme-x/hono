@@ -26,7 +26,8 @@ let buildConditionsCache: [
 export function buildPreparedMatch<T>(
   routes: Routes<T>,
   isRebuild: boolean,
-  isNoStaticHandlers: boolean
+  isNoStaticHandlers: boolean,
+  isNoPreparedHandlers: boolean
 ): PreparedMatch<T> {
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
@@ -36,14 +37,15 @@ export function buildPreparedMatch<T>(
   }
 
   const source = `
-      const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
+      ${
+        isNoPreparedHandlers ? '' : `
+            const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
+            const ${variables.preparedResult} = ${variables.preparedMethods}?.[method]
 
-      if (${variables.preparedMethods}) {
-        const ${variables.preparedResult} = ${variables.preparedMethods}[method]
-
-        if (${variables.preparedResult}) {
-          return ${variables.preparedResult}
-        }
+            if (${variables.preparedResult}) {
+              return ${variables.preparedResult};
+            }
+            `
       }
 
       ${

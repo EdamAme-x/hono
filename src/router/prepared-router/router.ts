@@ -118,9 +118,10 @@ export class PreparedRouter<T> implements Router<T> {
       }
     }
 
-    const prePreparedMatch = buildPreparedMatch(middleware, false, false)
+    const prePreparedMatch = buildPreparedMatch(middleware, false, false, false)
 
     let isNoStaticHandlers = true
+    let isNoPreparedHandlers = true
 
     for (const path in this.#staticHandlers) {
       const staticMethods = this.#staticHandlers[path]
@@ -130,6 +131,7 @@ export class PreparedRouter<T> implements Router<T> {
           isNoStaticHandlers = false
           continue
         }
+        isNoPreparedHandlers = false
         const matchResult = prePreparedMatch(
           method,
           path,
@@ -145,7 +147,7 @@ export class PreparedRouter<T> implements Router<T> {
         delete this.#staticHandlers[path][method]
       }
     }
-    this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers)
+    this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers, isNoPreparedHandlers)
   }
 
   build(): string {
