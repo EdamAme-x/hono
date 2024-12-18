@@ -5,6 +5,7 @@ import { PatternRouter } from '../../../src/router/pattern-router/index.ts'
 import type { Router } from '../../../src/router.ts'
 import type { RouterInterface } from './tool.mts'
 import { routes, handler } from './tool.mts'
+import { LinearRouter } from '../../../src/router/linear-router/index.ts';
 
 const createHonoRouter = (name: string, router: Router<unknown>): RouterInterface => {
   for (const route of routes) {
@@ -26,3 +27,4 @@ export const preparedRouter = [
 ]
 export const trieRouter = createHonoRouter('TrieRouter', new TrieRouter())
 export const patternRouter = createHonoRouter('PatternRouter', new PatternRouter())
+export const linearRouter =  createHonoRouter('LinearRouter', new LinearRouter())
