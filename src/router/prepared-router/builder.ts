@@ -39,12 +39,10 @@ export function buildPreparedMatch<T>(
       const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
 
       if (${variables.preparedMethods}) {
-        const ${variables.preparedResult} = ${variables.preparedMethods}[method] || ${
-    variables.preparedMethods
-  }['${METHOD_NAME_ALL}']
+        const ${variables.preparedResult} = ${variables.preparedMethods}[method]
 
         if (${variables.preparedResult}) {
-          return [${variables.preparedResult}]
+          return ${variables.preparedResult}
         }
       }
 

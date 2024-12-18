@@ -10,7 +10,7 @@ export type PreparedMatch<T> = (
   path: string,
   createParams: new () => Params,
   staticHandlers: Record<string, Record<string, [T, Params, number][]>>,
-  preparedHandlers: Record<string, Record<string, [T, Params][]>>,
+  preparedHandlers: Record<string, Record<string, Result<T>>>,
   handlers: T[]
 ) => [[T, Params][]]
 
@@ -43,7 +43,7 @@ export class PreparedRouter<T> implements Router<T> {
   #routes: Routes<T> = []
   #handlers: T[] = []
   #staticHandlers: Record<string, Record<string, [T, Params, number][]>> = Object.create(null)
-  #preparedHandlers: Record<string, Record<string, [T, Params][]>> = Object.create(null)
+  #preparedHandlers: Record<string, Record<string, Result<T>>> = Object.create(null)
 
   constructor() {
     if (typeof Function === 'undefined') {
@@ -140,7 +140,7 @@ export class PreparedRouter<T> implements Router<T> {
         )
 
         this.#preparedHandlers[path] ||= Object.create(null)
-        this.#preparedHandlers[path][method] = matchResult[0]
+        this.#preparedHandlers[path][method] = matchResult
 
         delete this.#staticHandlers[path][method]
       }
@@ -174,10 +174,10 @@ export class PreparedRouter<T> implements Router<T> {
           Object.entries(this.#preparedHandlers).reduce((prev, cur) => {
             for (const method in cur[1]) {
               prev[cur[0]] ||= Object.create(null)
-              prev[cur[0]][method] ||= []
+              prev[cur[0]][method] ||= [[]]
             }
             return prev
-          }, {} as Record<string, Record<string, []>>)
+          }, {} as Record<string, Record<string, [[]]>>)
         )};
         const handlers = [];
 
@@ -187,7 +187,7 @@ export class PreparedRouter<T> implements Router<T> {
             if (method in (staticHandlers[path] || emptyParams)) {
               staticHandlers[path][method].push([handler, emptyParams])
             }else if (method in (preparedHandlers[path] || emptyParams)) {
-              preparedHandlers[path][method].push([handler, emptyParams])
+              preparedHandlers[path][method][0].push([handler, emptyParams])
             }else {
               handlers.push(handler)
             }
