@@ -28,7 +28,6 @@ export function buildPreparedMatch<T>(
   isRebuild: boolean,
   isNoStaticHandlers: boolean
 ): PreparedMatch<T> {
-  console.log(routes)
   const methodWithRoutes: Record<string, Routes<T>> = {}
 
   for (const route of routes) {
