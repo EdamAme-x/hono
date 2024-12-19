@@ -21,6 +21,7 @@ describe('PreparedRouter', () => {
       router.add('DELETE', '/posts/:id', 'delete post')
       router.add('POST', '/posts/:id/*', 'post assets')
       router.add('ALL', '/ping', 'pong')
+      router.add('ALL', '*', 'wildcard')
 
       const precompiledRouter = new Function("return " + router.build())()
 
@@ -29,12 +30,13 @@ describe('PreparedRouter', () => {
       precompiledRouter.add('DELETE', '/posts/:id', 'delete post')
       precompiledRouter.add('POST', '/posts/:id/*', 'post assets')
       precompiledRouter.add('ALL', '/ping', 'pong')
+      precompiledRouter.add('ALL', '/*', 'wildcard')
 
-      expect(precompiledRouter.match('GET', '/posts')).toEqual([[['get posts', {}]]])
-      expect(precompiledRouter.match('POST', '/post')).toEqual([[['create post', {}]]])
-      expect(precompiledRouter.match('DELETE', '/posts/123')).toEqual([[['delete post', { id: '123' }]]])
-      expect(precompiledRouter.match('POST', '/posts/123/abc')).toEqual([[['post assets', { id: '123' }]]])
-      expect(precompiledRouter.match('ALL', '/ping')).toEqual([[['pong', {}]]])
+      expect(precompiledRouter.match('GET', '/posts')).toEqual([[['get posts', {}], ['wildcard', {}]]])
+      expect(precompiledRouter.match('POST', '/post')).toEqual([[['create post', {}], ['wildcard', {}]]])
+      expect(precompiledRouter.match('DELETE', '/posts/123')).toEqual([[['delete post', { id: '123' }], ['wildcard', {}]]])
+      expect(precompiledRouter.match('POST', '/posts/123/abc')).toEqual([[['post assets', { id: '123' }], ['wildcard', {}]]])
+      expect(precompiledRouter.match('ALL', '/ping')).toEqual([[['pong', {}], ['wildcard', {}]]])
     })
   })
 })

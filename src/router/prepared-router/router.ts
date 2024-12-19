@@ -68,6 +68,10 @@ export class PreparedRouter<T> implements Router<T> {
     if (optionalParameter) {
       optionalParameter.forEach((p) => this.add(method, p, handler))
     } else {
+      if (path === '*') {
+        path = '/*'
+      }
+
       let isStatic = false
 
       if (isStaticPath(path)) {
@@ -168,54 +172,6 @@ export class PreparedRouter<T> implements Router<T> {
       this.#buildPreparedMatch()
     }
 
-    return `new (function () {
-        const preparedMatch = ${this.#preparedMatch!.toString()};
-        const emptyParams = Object.create(null)
-        const createParams = (() => {
-          const E = function () {}
-          E.prototype = emptyParams
-          return E
-        })();
-        const staticHandlers =  ${JSON.stringify(
-          Object.entries(this.#staticHandlers).reduce((prev, cur) => {
-            for (const method in cur[1]) {
-              prev[cur[0]] ||= Object.create(null)
-              prev[cur[0]][method] ||= []
-            }
-            return prev
-          }, {} as Record<string, Record<string, []>>)
-        )};
-        const preparedHandlers = ${JSON.stringify(
-          Object.entries(this.#preparedHandlers).reduce((prev, cur) => {
-            for (const method in cur[1]) {
-              prev[cur[0]] ||= Object.create(null)
-              prev[cur[0]][method] ||= [[]]
-            }
-            return prev
-          }, {} as Record<string, Record<string, [[]]>>)
-        )};
-        const handlers = Object.create(null);
-        let handlerCount = 0;
-        let orderCount = 0;
-
-        return {
-          name: '${this.name}',
-          add: function (method, path, handler) {
-            if (method in (staticHandlers[path] || emptyParams)) {
-              staticHandlers[path][method].push({ handler, params: emptyParams, order: orderCount });
-            }else if (method in (preparedHandlers[path] || emptyParams)) {
-              preparedHandlers[path][method][0].push([handler, emptyParams]);
-            }else {
-              ++handlerCount;
-              handlers[\`handler\${handlerCount}\`] = handler;
-            }
-
-            ++orderCount;
-          },
-          match: function (method, path) {
-            return preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers);
-          }
-        }
-      })()`
+    return ``
   }
 }
