@@ -20,6 +20,7 @@ describe('PreparedRouter', () => {
       router.add('POST', '/post', 'create post')
       router.add('DELETE', '/posts/:id', 'delete post')
       router.add('POST', '/posts/:id/*', 'post assets')
+      router.add('ALL', '/ping', 'pong')
 
       const precompiledRouter = new Function("return " + router.build())()
 
@@ -27,11 +28,13 @@ describe('PreparedRouter', () => {
       precompiledRouter.add('POST', '/post', 'create post')
       precompiledRouter.add('DELETE', '/posts/:id', 'delete post')
       precompiledRouter.add('POST', '/posts/:id/*', 'post assets')
+      precompiledRouter.add('ALL', '/ping', 'pong')
 
       expect(precompiledRouter.match('GET', '/posts')).toEqual([[['get posts', {}]]])
       expect(precompiledRouter.match('POST', '/post')).toEqual([[['create post', {}]]])
       expect(precompiledRouter.match('DELETE', '/posts/123')).toEqual([[['delete post', { id: '123' }]]])
       expect(precompiledRouter.match('POST', '/posts/123/abc')).toEqual([[['post assets', { id: '123' }]]])
+      expect(precompiledRouter.match('ALL', '/ping')).toEqual([[['pong', {}]]])
     })
   })
 })

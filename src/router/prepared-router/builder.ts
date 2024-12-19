@@ -58,7 +58,7 @@ export function buildPreparedMatch<T>(
         const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
         `
       }
-      const ${variables.emptyParams} = Object.create(null);
+      const ${variables.emptyParams} = new createParams();
       const ${variables.pathParts} = ${variables.path}.split('/');
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
@@ -80,12 +80,12 @@ export function buildPreparedMatch<T>(
       routes.length > 0 ? 
         `
         if (${variables.matchResult}.length > 1) {
-          ${variables.matchResult}.sort((a, b) => a[2] - b[2]);   
+          ${variables.matchResult}.sort((a, b) => a.order - b.order);   
         }
         ` : ''
      }
 
-      return [${variables.matchResult}.map(([handler, params]) => [handler, params])];`
+      return [${variables.matchResult}.map(({ handler, params }) => [handler, params])];`
 
   if (isRebuild) {
     buildConditionsCache = [[], []]
@@ -97,7 +97,7 @@ export function buildPreparedMatch<T>(
     variables.createParams,
     variables.staticHandlers,
     variables.preparedHandlers,
-    `[${routes.map((route) => variables.handler(route.tag)).join(',')}]`,
+    `{${routes.map((route) => variables.handler(route.tag)).join(',')}}`,
     source
   ) as PreparedMatch<T>
 }
@@ -286,9 +286,13 @@ function buildConditions<T>(routes: Routes<T>): string {
       `
         : ''
     }
-    ${variables.matchResult}.push([${variables.handler(tagIndex)}, ${
-      isParams ? variables.params : variables.emptyParams
-    }, ${handlerIndex}])`
+    ${variables.matchResult}.push({
+      handler: ${variables.handler(tagIndex)}, 
+      params: ${
+        isParams ? variables.params : variables.emptyParams
+      },
+      order: ${handlerIndex}
+    })`
 
     return conditionTree
   }

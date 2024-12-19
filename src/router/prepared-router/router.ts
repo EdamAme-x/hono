@@ -9,9 +9,13 @@ export type PreparedMatch<T> = (
   method: string,
   path: string,
   createParams: new () => Params,
-  staticHandlers: Record<string, Record<string, [T, Params, number][]>>,
+  staticHandlers: Record<string, Record<string, {
+    handler: T,
+    params: Params,
+    order: number
+  }[]>>,
   preparedHandlers: Record<string, Record<string, Result<T>>>,
-  handlers: T[]
+  handlers: Record<`handler${number}`, T>
 ) => [[T, Params][]]
 
 export type Route<T> = {
@@ -41,8 +45,12 @@ export class PreparedRouter<T> implements Router<T> {
   name: string = 'PreparedRouter'
   #preparedMatch?: PreparedMatch<T>
   #routes: Routes<T> = []
-  #handlers: T[] = []
-  #staticHandlers: Record<string, Record<string, [T, Params, number][]>> = Object.create(null)
+  #handlers: Record<`handler${number}`, T> = Object.create(null)
+  #staticHandlers: Record<string, Record<string, {
+    handler: T,
+    params: Params,
+    order: number
+  }[]>> = Object.create(null)
   #preparedHandlers: Record<string, Record<string, Result<T>>> = Object.create(null)
 
   constructor() {
@@ -110,10 +118,14 @@ export class PreparedRouter<T> implements Router<T> {
         this.#staticHandlers[path] ||= Object.create(null)
         this.#staticHandlers[path][method] ||= []
 
-        this.#staticHandlers[path][method].push([route.handler, emptyParams, route.order])
+        this.#staticHandlers[path][method].push({
+          handler: route.handler,
+          params: emptyParams,
+          order: route.order
+        })
       } else {
         route.tag = ++tagIndex
-        this.#handlers.push(route.handler)
+        this.#handlers[`handler${route.tag}`] = route.handler
         middleware.push(route)
       }
     }
@@ -181,21 +193,26 @@ export class PreparedRouter<T> implements Router<T> {
             return prev
           }, {} as Record<string, Record<string, [[]]>>)
         )};
-        const handlers = [];
+        const handlers = Object.create(null);
+        let handlerCount = 0;
+        let orderCount = 0;
 
         return {
           name: '${this.name}',
           add: function (method, path, handler) {
             if (method in (staticHandlers[path] || emptyParams)) {
-              staticHandlers[path][method].push([handler, emptyParams])
+              staticHandlers[path][method].push({ handler, params: emptyParams, order: orderCount });
             }else if (method in (preparedHandlers[path] || emptyParams)) {
-              preparedHandlers[path][method][0].push([handler, emptyParams])
+              preparedHandlers[path][method][0].push([handler, emptyParams]);
             }else {
-              handlers.push(handler)
+              ++handlerCount;
+              handlers[\`handler\${handlerCount}\`] = handler;
             }
+
+            orderCount++;
           },
           match: function (method, path) {
-            return preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers)
+            return preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers);
           }
         }
       })()`
