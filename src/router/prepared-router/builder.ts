@@ -39,8 +39,8 @@ export function buildPreparedMatch<T>(
   const source = `
       ${
         isNoPreparedHandlers ? '' : `
-            const ${variables.preparedMethods} = ${variables.preparedHandlers}[path];
-            const ${variables.preparedResult} = ${variables.preparedMethods}?.[method]
+            const ${variables.preparedMethods} = ${variables.preparedHandlers}[${variables.path}];
+            const ${variables.preparedResult} = ${variables.preparedMethods}?.[${variables.method}]
 
             if (${variables.preparedResult}) {
               return ${variables.preparedResult};
@@ -54,11 +54,11 @@ export function buildPreparedMatch<T>(
         const ${variables.matchResult} = [];
         `
           : `
-        const ${variables.staticMethods} = ${variables.staticHandlers}[path];
-        const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[method] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
+        const ${variables.staticMethods} = ${variables.staticHandlers}[${variables.path}];
+        const ${variables.matchResult} = ${variables.staticMethods} ? (${variables.staticMethods}[${variables.method}] || ${variables.staticMethods}['${METHOD_NAME_ALL}'] || []) : [];
         `
       }
-      const ${variables.emptyParams} = new createParams();
+      const ${variables.emptyParams} = new ${variables.createParams}();
       const ${variables.pathParts} = ${variables.path}.split('/');
 
       ${methodWithRoutes[METHOD_NAME_ALL] ? buildConditions(methodWithRoutes[METHOD_NAME_ALL]) : ''}
