@@ -209,7 +209,7 @@ export class PreparedRouter<T> implements Router<T> {
               handlers[\`handler\${handlerCount}\`] = handler;
             }
 
-            orderCount++;
+            ++orderCount;
           },
           match: function (method, path) {
             return preparedMatch(method, path, createParams, staticHandlers, preparedHandlers, handlers);
