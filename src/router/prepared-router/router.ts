@@ -166,7 +166,7 @@ export class PreparedRouter<T> implements Router<T> {
     this.#preparedMatch = buildPreparedMatch(middleware, true, isNoStaticHandlers, isNoPreparedHandlers)
   }
 
-  // current not working well
+  // note: current not working well
   build(): string {
     if (!this.#preparedMatch) {
       this.#buildPreparedMatch()
