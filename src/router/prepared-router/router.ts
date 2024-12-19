@@ -172,6 +172,8 @@ export class PreparedRouter<T> implements Router<T> {
       this.#buildPreparedMatch()
     }
 
-    return ``
+    return `new (function () {
+      throw new Error('Current not working well')
+    })()`
   }
 }
