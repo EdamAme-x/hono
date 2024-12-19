@@ -40,7 +40,7 @@ export function buildPreparedMatch<T>(
       ${
         isNoPreparedHandlers ? '' : `
             const ${variables.preparedMethods} = ${variables.preparedHandlers}[${variables.path}];
-            const ${variables.preparedResult} = ${variables.preparedMethods}?.[${variables.method}]
+            const ${variables.preparedResult} = ${variables.preparedMethods}?.[${variables.method}];
 
             if (${variables.preparedResult}) {
               return ${variables.preparedResult};
