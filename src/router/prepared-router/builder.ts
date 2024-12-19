@@ -67,7 +67,7 @@ export function buildPreparedMatch<T>(
         const conditions: string[] = []
         for (const [method, routes] of Object.entries(methodWithRoutes)) {
           conditions.push(
-            `${conditions.length ? 'else if' : 'if'} (method === '${method}') {${buildConditions(
+            `${conditions.length ? 'else ' : ''}if (method === '${method}') {${buildConditions(
               routes
             )}}`
           )
