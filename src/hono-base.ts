@@ -187,7 +187,7 @@ class Hono<E extends Env = Env, S extends Schema = {}, BasePath extends string =
    * @see {@link https://hono.dev/docs/api/routing#grouping}
    *
    * @param {string} path - base Path
-   * @param {Hono} app - other Hono instance
+   * @param {...Hono[]} apps - other Hono instances
    * @returns {Hono} routed Hono instance
    *
    * @example
@@ -199,28 +199,33 @@ class Hono<E extends Env = Env, S extends Schema = {}, BasePath extends string =
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route<
-    SubPath extends string,
-    SubEnv extends Env,
-    SubSchema extends Schema,
-    SubBasePath extends string
-  >(
+  route<SubPath extends string, SubApps extends Hono<any, any, any>[]>(
     path: SubPath,
-    app: Hono<SubEnv, SubSchema, SubBasePath>
-  ): Hono<E, MergeSchemaPath<SubSchema, MergePath<BasePath, SubPath>> | S, BasePath> {
+    ...apps: SubApps
+  ): Hono<
+    E,
+    | MergeSchemaPath<
+        SubApps[number] extends Hono<any, infer SubSchema, any> ? SubSchema : never,
+        MergePath<BasePath, SubPath>
+      >
+    | S,
+    BasePath
+  > {
     const subApp = this.basePath(path)
-    app.routes.map((r) => {
-      let handler
-      if (app.errorHandler === errorHandler) {
-        handler = r.handler
-      } else {
-        handler = async (c: Context, next: Next) =>
-          (await compose<Context>([], app.errorHandler)(c, () => r.handler(c, next))).res
-        ;(handler as any)[COMPOSED_HANDLER] = r.handler
-      }
+    for (const app of apps) {
+      app.routes.map((r) => {
+        let handler
+        if (app.errorHandler === errorHandler) {
+          handler = r.handler
+        } else {
+          handler = async (c: Context, next: Next) =>
+            (await compose<Context>([], app.errorHandler)(c, () => r.handler(c, next))).res
+          ;(handler as any)[COMPOSED_HANDLER] = r.handler
+        }
 
-      subApp.#addRoute(r.method, r.path, handler)
-    })
+        subApp.#addRoute(r.method, r.path, handler)
+      })
+    }
     return this
   }
 

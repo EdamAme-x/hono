@@ -518,6 +518,17 @@ describe('Merge path with `app.route()`', () => {
     expect(data.ok).toBe(true)
   })
 
+  it('Should have correct types when multiple apps', async () => {
+    const api = new Hono<Env>().get('/search', (c) => c.json({ ok: true }))
+    const api2 = new Hono<Env>().get('/list', (c) => c.json({ ok: true }))
+    const app = new Hono<Env>().route('/api', api, api2)
+    type AppType = typeof app
+    const client = hc<AppType>('http://localhost')
+    type res = Awaited<ReturnType<typeof client.api.search.$get>>
+    type data = Awaited<ReturnType<res['json']>>
+    type verify = Expect<Equal<boolean, data['ok']>>
+  })
+
   it('Should have correct types - basePath() then get()', async () => {
     const base = new Hono<Env>().basePath('/api')
     const app = base.get('/search', (c) => c.json({ ok: true }))

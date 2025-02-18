@@ -505,6 +505,24 @@ describe('Routing', () => {
     res = await app.request('http://localhost/user/hello', { method: 'GET' })
     expect(res.status).toBe(200)
     expect(await res.text()).toBe('get /user/hello')
+
+    const app2 = new Hono()
+
+    const book2 = new Hono()
+    book2.get('/book', (c) => c.text('get /book'))
+
+    const user2 = new Hono()
+    user2.get('/user', (c) => c.text('get /user'))
+
+    app2.route('/', book2, user2)
+
+    res = await app2.request('http://localhost/book', { method: 'GET' })
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('get /book')
+
+    res = await app2.request('http://localhost/user', { method: 'GET' })
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('get /user')
   })
 
   describe('Nested route with middleware', () => {
