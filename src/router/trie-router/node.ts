@@ -207,7 +207,13 @@ export class Node<T> {
             if (isLast) {
               this.#pushHandlerSets(handlerSets, child, method, params, node.#params)
               if (child.#children['*']) {
-                this.#pushHandlerSets(handlerSets, child.#children['*'], method, params, node.#params)
+                this.#pushHandlerSets(
+                  handlerSets,
+                  child.#children['*'],
+                  method,
+                  params,
+                  node.#params
+                )
               }
             } else {
               child.#params = params
