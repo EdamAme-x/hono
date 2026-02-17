@@ -6,11 +6,7 @@
 export type Pattern = readonly [string, string, RegExp | true] | '*'
 
 export const splitPath = (path: string): string[] => {
-  const paths = path.split('/')
-  if (paths[0] === '') {
-    paths.shift()
-  }
-  return paths
+  return (path[0] === '/' ? path.substring(1) : path).split('/')
 }
 
 export const splitRoutingPath = (routePath: string): string[] => {

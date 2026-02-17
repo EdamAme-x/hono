@@ -274,10 +274,10 @@ type ResponseOrInit<T extends StatusCode = StatusCode> = ResponseInit<T> | Respo
 export const TEXT_PLAIN = 'text/plain; charset=UTF-8'
 
 const setDefaultContentType = (contentType: string, headers?: HeaderRecord): HeaderRecord => {
-  return {
-    'Content-Type': contentType,
-    ...headers,
+  if (!headers) {
+    return { 'Content-Type': contentType } as HeaderRecord
   }
+  return Object.assign({ 'Content-Type': contentType }, headers) as HeaderRecord
 }
 
 export class Context<
