@@ -66,12 +66,7 @@ export class SmartRouter<T> implements Router<T> {
     throw new Error('Fatal error')
   }
 
-  #tryMatch(
-    router: Router<T>,
-    routes: Route<T>,
-    method: string,
-    path: string
-  ): Result<T> | null {
+  #tryMatch(router: Router<T>, routes: Route<T>, method: string, path: string): Result<T> | null {
     try {
       for (let i = 0, len = routes.length; i < len; i++) {
         const route = routes[i]
