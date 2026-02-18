@@ -6,12 +6,11 @@ type Route<T> = [method: string, path: string, handler: T][]
 export class SmartRouter<T> implements Router<T> {
   name: string = 'SmartRouter'
   #routers?: Router<T>[]
-  #routes?: Route<T>
+  #routes?: Route<T> = []
   #activeRouter?: Router<T>
 
   constructor(init: { routers: Router<T>[] }) {
     this.#routers = init.routers
-    this.#routes = []
   }
 
   add(method: string, path: string, handler: T) {
