@@ -360,4 +360,26 @@ describe('url', () => {
       })
     })
   })
+
+  describe('prototype pollution prevention', () => {
+    it('getQueryParams result should have null prototype', () => {
+      const result = getQueryParams('http://example.com/?__proto__=evil') as Record<string, string[]>
+      expect(Object.getPrototypeOf(result)).toBeNull()
+      expect(result['__proto__']).toEqual(['evil'])
+    })
+
+    it('getQueryParam result should have null prototype', () => {
+      const result = getQueryParam('http://example.com/?__proto__=evil') as Record<string, string>
+      expect(Object.getPrototypeOf(result)).toBeNull()
+      expect(result['__proto__']).toBe('evil')
+    })
+
+    it('__proto__ key should not pollute Object prototype via getQueryParams', () => {
+      const before = ({} as Record<string, unknown>)['polluted']
+      getQueryParams('http://example.com/?__proto__[polluted]=yes')
+      const after = ({} as Record<string, unknown>)['polluted']
+      expect(before).toBeUndefined()
+      expect(after).toBeUndefined()
+    })
+  })
 })
