@@ -312,7 +312,11 @@ export class Context<
    * })
    * ```
    */
-  env: E['Bindings'] = {}
+  // Avoid the eager `{}` class-field initializer: when options are provided
+  // (the common path in #dispatch) the constructor overwrites it immediately,
+  // throwing away one object allocation per request. The constructor now
+  // assigns `{}` only when no options (or no options.env) is provided.
+  env!: E['Bindings']
   #var: Map<unknown, unknown> | undefined
   finalized: boolean = false
   /**
@@ -353,10 +357,12 @@ export class Context<
     this.#rawRequest = req
     if (options) {
       this.#executionCtx = options.executionCtx
-      this.env = options.env
+      this.env = options.env ?? ({} as E['Bindings'])
       this.#notFoundHandler = options.notFoundHandler
       this.#path = options.path
       this.#matchResult = options.matchResult
+    } else {
+      this.env = {} as E['Bindings']
     }
   }
 
