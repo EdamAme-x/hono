@@ -105,7 +105,20 @@ export const tryDecodeURI = (str: string): string => tryDecode(str, decodeURI)
 
 export const getPath = (request: Request): string => {
   const url = request.url
-  const start = url.indexOf('/', url.indexOf(':') + 4)
+  // Fast path: skip common schemes without the full-string indexOf(':') scan.
+  // 'http://'  (7 chars) and 'https://' (8 chars) cover virtually all Request urls.
+  // charCode 115 === 's'.
+  let start: number
+  if (url.charCodeAt(4) === 115 /* 's' */) {
+    // https://
+    start = url.indexOf('/', 8)
+  } else if (url.charCodeAt(4) === 58 /* ':' */) {
+    // http://
+    start = url.indexOf('/', 7)
+  } else {
+    // Other schemes (ws://, custom, etc.) — keep the generic scan.
+    start = url.indexOf('/', url.indexOf(':') + 4)
+  }
   let i = start
   for (; i < url.length; i++) {
     const charCode = url.charCodeAt(i)
